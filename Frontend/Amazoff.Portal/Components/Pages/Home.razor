@@ -1,0 +1,74 @@
+@page "/"
+
+<PageTitle>Amazoff Portal</PageTitle>
+
+<section class="login-shell min-h-screen bg-white text-slate-700">
+    <div class="grid min-h-screen grid-cols-1 lg:grid-cols-[2fr_1fr]">
+        <aside class="portal-image-panel relative hidden min-h-screen items-center overflow-hidden px-14 lg:flex xl:px-20">
+            <div class="absolute inset-0 bg-slate-900/48"></div>
+            <div class="absolute inset-0 bg-[#5aadf4]/10"></div>
+
+            <div class="relative max-w-4xl">
+                <p class="mb-6 text-sm font-bold uppercase tracking-[0.42em] text-white/80">Amazoff Portal</p>
+                <h1 class="max-w-3xl text-5xl font-black uppercase leading-[1.15] tracking-wide text-white outline-none focus:outline-none xl:text-6xl">
+                    Entre e saiba tudo sobre o seu negocio
+                </h1>
+            </div>
+        </aside>
+
+        <main class="flex min-h-screen items-center justify-center bg-white px-6 py-10 sm:px-10">
+            <div class="w-full max-w-[380px]">
+                <div class="mb-10 flex flex-col items-center text-center">
+                    <img src="/images/Logo_Amazoff.png"
+                         alt="Amazoff"
+                         class="mb-8 h-auto w-56 object-contain" />
+
+                    <h2 class="text-xl font-medium tracking-wide text-slate-500">
+                        Entre na sua conta <span class="font-extrabold text-slate-600">AMAZOFF</span>
+                    </h2>
+                </div>
+
+                <EditForm Model="LoginModel" OnValidSubmit="HandleLogin">
+                    <div class="space-y-5">
+                        <div>
+                            <label for="username" class="sr-only">Username</label>
+                            <InputText id="username"
+                                       @bind-Value="LoginModel.Username"
+                                       autocomplete="username"
+                                       placeholder="Username"
+                                       class="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none transition placeholder:text-slate-500 focus:border-[#5aadf4] focus:ring-4 focus:ring-[#5aadf4]/15" />
+                        </div>
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="h-10 min-w-28 rounded bg-[#5aadf4] px-7 text-sm font-bold text-white shadow-sm shadow-[#5aadf4]/20 transition hover:bg-[#439ce6] focus:outline-none focus:ring-4 focus:ring-[#5aadf4]/25">
+                                Seguinte
+                            </button>
+                        </div>
+                    </div>
+                </EditForm>
+
+                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    <div class="mt-6 rounded border border-[#5aadf4]/25 bg-[#5aadf4]/10 px-4 py-3 text-sm font-medium text-slate-600">
+                        @StatusMessage
+                    </div>
+                }
+            </div>
+        </main>
+    </div>
+</section>
+
+@code {
+    private PortalLogin LoginModel { get; } = new();
+    private string? StatusMessage { get; set; }
+
+    private void HandleLogin()
+    {
+        StatusMessage = "Utilizador recebido. O passo de password/API fica para a proxima fase.";
+    }
+
+    private sealed class PortalLogin
+    {
+        public string? Username { get; set; }
+    }
+}
