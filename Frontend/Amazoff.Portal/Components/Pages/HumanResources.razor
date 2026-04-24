@@ -1,0 +1,289 @@
+@page "/recursos-humanos"
+@rendermode InteractiveServer
+@inject IHttpClientFactory HttpClientFactory
+@inject IConfiguration Configuration
+
+<PageTitle>Recursos Humanos</PageTitle>
+
+<section class="dashboard-shell">
+    <div class="dashboard-window">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="/images/LogoShort_Amazoff.png" alt="Amazoff" class="dashboard-brand__logo" />
+            </div>
+
+            <div class="dashboard-nav-group">
+                <a class="dashboard-nav-item" href="/dashboard">
+                    <span>Dashboard</span>
+                </a>
+                <a class="dashboard-nav-item" href="/produtos">
+                    <span>Produtos</span>
+                </a>
+            </div>
+
+            <div class="dashboard-nav-group">
+                <div class="dashboard-nav-item">
+                    <span>Encomendas</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Clientes</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Relatorios</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Marketing</span>
+                </div>
+                <a class="dashboard-nav-item dashboard-nav-item--active" href="/recursos-humanos">
+                    <span>Recursos Humanos</span>
+                </a>
+            </div>
+
+            <div class="dashboard-upgrade-card">
+                <p class="dashboard-upgrade-card__title">Equipa</p>
+                <p class="dashboard-upgrade-card__text">Gerir colaboradores, acessos e estado da equipa num unico sitio.</p>
+            </div>
+        </aside>
+
+        <div class="dashboard-content">
+            <header class="dashboard-topbar">
+                <div class="dashboard-topbar__left">
+                    <button class="dashboard-menu-button" type="button" aria-label="Open menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+
+                    <div>
+                        <p class="dashboard-breadcrumbs">Home / Recursos Humanos / Equipa</p>
+                        <h2>Recursos Humanos</h2>
+                    </div>
+                </div>
+
+                <div class="dashboard-topbar__right">
+                    <div class="dashboard-profile">
+                        <div class="dashboard-profile__avatar">RH</div>
+                        <div>
+                            <p class="dashboard-profile__name">Gestao de colaboradores</p>
+                            <p class="dashboard-profile__role">Criar, editar e remover utilizadores</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="dashboard-grid hr-grid">
+                <section class="dashboard-panel hr-table-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Equipa atual</p>
+                            <h3>@Employees.Count trabalhador(es)</h3>
+                        </div>
+                    </div>
+
+                    @if (IsLoading)
+                    {
+                        <p class="dashboard-copy">A carregar trabalhadores...</p>
+                    }
+                    else if (Employees.Count == 0)
+                    {
+                        <p class="dashboard-copy">Ainda nao existem trabalhadores registados.</p>
+                    }
+                    else
+                    {
+                        <div class="hr-table-wrap">
+                            <table class="hr-table">
+                                <thead>
+                                    <tr>
+                                        <th>Avatar</th>
+                                        <th>Nome</th>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Image path</th>
+                                        <th>Estado</th>
+                                        <th>Ultimo login</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var employee in Employees)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @if (!string.IsNullOrWhiteSpace(employee.ImagePath))
+                                                {
+                                                    <img src="@employee.ImagePath"
+                                                         alt="@employee.FullName"
+                                                         class="hr-avatar-image" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="hr-avatar-fallback">@employee.Initials</div>
+                                                }
+                                            </td>
+                                            <td>@employee.FullName</td>
+                                            <td>@employee.Username</td>
+                                            <td>@employee.Email</td>
+                                            <td class="hr-image-path">@(employee.ImagePath ?? "-")</td>
+                                            <td>
+                                                <span class="@(employee.IsActive ? "hr-badge" : "hr-badge hr-badge--inactive")">
+                                                    @(employee.IsActive ? "Ativo" : "Inativo")
+                                                </span>
+                                            </td>
+                                            <td>@(employee.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                                            <td class="hr-table-actions">
+                                                <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => DeleteEmployeeAsync(employee)">Remover</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                    {
+                        <div class="@(HasError ? "hr-feedback hr-feedback--error" : "hr-feedback")">
+                            @StatusMessage
+                        </div>
+                    }
+                </section>
+            </main>
+        </div>
+    </div>
+</section>
+
+@code {
+    private readonly List<EmployeeViewModel> Employees = [];
+    private string? StatusMessage { get; set; }
+    private bool HasError { get; set; }
+    private bool IsBusy { get; set; }
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmployeesAsync();
+    }
+
+    private async Task LoadEmployeesAsync()
+    {
+        IsLoading = true;
+
+        try
+        {
+            var employees = await SendApiRequestAsync(async client =>
+                await client.GetFromJsonAsync<List<EmployeeViewModel>>("/employees"));
+
+            Employees.Clear();
+
+            if (employees is not null)
+            {
+                Employees.AddRange(employees);
+            }
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel carregar os trabalhadores.";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task DeleteEmployeeAsync(EmployeeViewModel employee)
+    {
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            var response = await SendApiRequestAsync(client => client.DeleteAsync($"/employees/{employee.Id}"));
+
+            if (response.IsSuccessStatusCode)
+            {
+                StatusMessage = "Trabalhador removido com sucesso.";
+                await LoadEmployeesAsync();
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel remover o trabalhador.";
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel remover o trabalhador.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<T> SendApiRequestAsync<T>(Func<HttpClient, Task<T>> request)
+    {
+        Exception? lastError = null;
+
+        foreach (var baseUrl in GetApiBaseUrls())
+        {
+            try
+            {
+                var client = HttpClientFactory.CreateClient();
+                client.BaseAddress = new Uri(baseUrl);
+
+                return await request(client);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                lastError = ex;
+            }
+        }
+
+        throw lastError ?? new HttpRequestException("Nao foi possivel ligar a API.");
+    }
+
+    private IEnumerable<string> GetApiBaseUrls()
+    {
+        var urls = new[]
+        {
+            Configuration["Api:BaseUrl"],
+            "https://localhost:44389",
+            "http://localhost:65097",
+            "https://localhost:7289",
+            "http://localhost:5289"
+        };
+
+        return urls
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Distinct(StringComparer.OrdinalIgnoreCase)!;
+    }
+
+    private sealed class EmployeeViewModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? ImagePath { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime? LastLoginAt { get; set; }
+
+        public string FullName => string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value))).Trim() switch
+        {
+            "" => Username,
+            var name => name
+        };
+
+        public string Initials =>
+            string.Concat((FirstName ?? Username)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(part => char.ToUpperInvariant(part[0])));
+    }
+
+    private sealed record ApiMessageResponse(string Message);
+}

@@ -1,0 +1,275 @@
+@page "/dashboard"
+
+<PageTitle>Dashboard</PageTitle>
+
+<section class="dashboard-shell">
+    <div class="dashboard-window">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="/images/LogoShort_Amazoff.png" alt="Amazoff" class="dashboard-brand__logo" />
+            </div>
+
+            <div class="dashboard-nav-group">
+                <a class="dashboard-nav-item dashboard-nav-item--active" href="/dashboard">
+                    <span>Dashboard</span>
+                </a>
+                <a class="dashboard-nav-item" href="/produtos">
+                    <span>Produtos</span>
+                </a>
+            </div>
+
+            <div class="dashboard-nav-group">
+                <div class="dashboard-nav-item">
+                    <span>Encomendas</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Clientes</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Relatorios</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Marketing</span>
+                </div>
+                <a class="dashboard-nav-item" href="/recursos-humanos">
+                    <span>Recursos Humanos</span>
+                </a>
+            </div>
+
+            <div class="dashboard-upgrade-card">
+                <p class="dashboard-upgrade-card__title">Operacao do dia</p>
+                <p class="dashboard-upgrade-card__text">Acompanha vendas, ticket medio e entregas numa vista mais moderna.</p>
+            </div>
+        </aside>
+
+        <div class="dashboard-content">
+            <header class="dashboard-topbar">
+                <div class="dashboard-topbar__left">
+                    <button class="dashboard-menu-button" type="button" aria-label="Open menu">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
+
+                    <div>
+                        <p class="dashboard-breadcrumbs">Home / Dashboard / Overview</p>
+                        <h2>Painel de controlo</h2>
+                    </div>
+                </div>
+
+                <div class="dashboard-topbar__right">
+                    <div class="dashboard-alert">
+                        <span class="dashboard-alert__dot"></span>
+                    </div>
+
+                    <div class="dashboard-profile">
+                        <div class="dashboard-profile__avatar">DB</div>
+                        <div>
+                            <p class="dashboard-profile__name">Daniel Brito</p>
+                            <p class="dashboard-profile__role">Administrador</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="dashboard-grid">
+                <section class="dashboard-kpi-grid dashboard-panel">
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Clientes</span>
+                        <strong>1,024</strong>
+                        <span class="dashboard-kpi-card__meta">+12% este mes</span>
+                    </article>
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Receita</span>
+                        <strong>12,520 EUR</strong>
+                        <span class="dashboard-kpi-card__meta">+8.4% vs abril</span>
+                    </article>
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Crescimento</span>
+                        <strong>600</strong>
+                        <span class="dashboard-kpi-card__meta">novos registos</span>
+                    </article>
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Downloads</span>
+                        <strong>3,550</strong>
+                        <span class="dashboard-kpi-card__meta">campanha ativa</span>
+                    </article>
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Devolucoes</span>
+                        <strong>74</strong>
+                        <span class="dashboard-kpi-card__meta">abaixo da media</span>
+                    </article>
+                    <article class="dashboard-kpi-card">
+                        <span class="dashboard-kpi-card__label">Taxa de entrega</span>
+                        <strong>98%</strong>
+                        <span class="dashboard-kpi-card__meta">envios concluidos</span>
+                    </article>
+                </section>
+
+                <section class="dashboard-chart-panel dashboard-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Sales report</p>
+                            <h3>Resumo mensal de vendas</h3>
+                        </div>
+                        <div class="dashboard-chart-summary">
+                            <div>
+                                <strong>21,356 EUR</strong>
+                                <span>Total sales</span>
+                            </div>
+                            <div>
+                                <strong>1,935 EUR</strong>
+                                <span>Average</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-chart">
+                        <div class="dashboard-chart__grid"></div>
+                        <div class="dashboard-chart__line"></div>
+                        <div class="dashboard-chart__bars">
+                            <span style="height: 28%"></span>
+                            <span style="height: 18%"></span>
+                            <span style="height: 26%"></span>
+                            <span style="height: 34%"></span>
+                            <span style="height: 21%"></span>
+                            <span style="height: 29%"></span>
+                            <span style="height: 46%"></span>
+                            <span style="height: 25%"></span>
+                            <span style="height: 53%"></span>
+                            <span style="height: 30%"></span>
+                            <span style="height: 38%"></span>
+                        </div>
+                        <div class="dashboard-chart__months">
+                            <span>Jan</span>
+                            <span>Feb</span>
+                            <span>Mar</span>
+                            <span>Apr</span>
+                            <span>May</span>
+                            <span>Jun</span>
+                            <span>Jul</span>
+                            <span>Aug</span>
+                            <span>Sep</span>
+                            <span>Oct</span>
+                            <span>Nov</span>
+                            <span>Dec</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-stat-panel dashboard-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Conversion</p>
+                            <h3>53.94%</h3>
+                        </div>
+                        <span class="dashboard-chip">+4.8%</span>
+                    </div>
+
+                    <p class="dashboard-copy">
+                        Percentagem de visitantes que finalizaram compra nas ultimas semanas.
+                    </p>
+
+                    <div class="dashboard-wave"></div>
+
+                    <div class="dashboard-years">
+                        <div>
+                            <strong>10</strong>
+                            <span>2024</span>
+                        </div>
+                        <div>
+                            <strong>15</strong>
+                            <span>2025</span>
+                        </div>
+                        <div>
+                            <strong>13</strong>
+                            <span>2026</span>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-delivery-panel dashboard-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Orders</p>
+                            <h3>1,432 entregas</h3>
+                        </div>
+                        <span class="dashboard-chip dashboard-chip--light">Este trimestre</span>
+                    </div>
+
+                    <p class="dashboard-copy">
+                        Volume mensal de entregas confirmadas com foco nos meses mais fortes do trimestre.
+                    </p>
+
+                    <div class="dashboard-mini-stats">
+                        <div><strong>130</strong><span>Maio</span></div>
+                        <div><strong>251</strong><span>Junho</span></div>
+                        <div><strong>235</strong><span>Julho</span></div>
+                    </div>
+
+                    <div class="dashboard-sparkbars">
+                        <span style="height: 44%"></span>
+                        <span style="height: 24%"></span>
+                        <span style="height: 56%"></span>
+                        <span style="height: 68%"></span>
+                        <span style="height: 34%"></span>
+                        <span style="height: 58%"></span>
+                        <span style="height: 21%"></span>
+                        <span style="height: 46%"></span>
+                        <span style="height: 51%"></span>
+                        <span style="height: 28%"></span>
+                        <span style="height: 62%"></span>
+                        <span style="height: 39%"></span>
+                        <span style="height: 71%"></span>
+                        <span style="height: 48%"></span>
+                        <span style="height: 27%"></span>
+                        <span style="height: 53%"></span>
+                        <span style="height: 36%"></span>
+                        <span style="height: 61%"></span>
+                    </div>
+                </section>
+
+                <section class="dashboard-donut-panel dashboard-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Customer satisfaction</p>
+                            <h3>Satisfacao do cliente</h3>
+                        </div>
+                    </div>
+
+                    <p class="dashboard-copy">
+                        O acompanhamento continuo das avaliacoes ajuda a corrigir atrasos e melhorar a experiencia.
+                    </p>
+
+                    <div class="dashboard-donut-wrap">
+                        <div class="dashboard-donut"></div>
+                        <div class="dashboard-donut-legend">
+                            <div><span class="dashboard-dot dashboard-dot--one"></span>Entregas no prazo</div>
+                            <div><span class="dashboard-dot dashboard-dot--two"></span>Suporte resolvido</div>
+                            <div><span class="dashboard-dot dashboard-dot--three"></span>Feedback pendente</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="dashboard-tile-grid">
+                    <article class="dashboard-tile dashboard-tile--plain">
+                        <span>Total profit</span>
+                        <strong>1,783 EUR</strong>
+                    </article>
+                    <article class="dashboard-tile dashboard-tile--accent">
+                        <span>Total orders</span>
+                        <strong>15,830</strong>
+                    </article>
+                    <article class="dashboard-tile dashboard-tile--accent-alt">
+                        <span>Average price</span>
+                        <strong>780 EUR</strong>
+                    </article>
+                    <article class="dashboard-tile dashboard-tile--plain">
+                        <span>Product sold</span>
+                        <strong>6,784</strong>
+                    </article>
+                </section>
+            </main>
+        </div>
+    </div>
+</section>

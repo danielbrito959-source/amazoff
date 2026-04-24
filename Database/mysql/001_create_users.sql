@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(120) NULL,
     last_name VARCHAR(120) NULL,
+    image_path VARCHAR(500) NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     last_login_at DATETIME NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -22,4 +23,3 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB
   DEFAULT CHARSET=utf8mb4
   COLLATE=utf8mb4_unicode_ci;
-
