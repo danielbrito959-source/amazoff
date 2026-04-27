@@ -176,7 +176,8 @@ h3:focus {
     color: #ffffff;
 }
 
-.dashboard-nav-item--active {
+.dashboard-nav-item--active,
+.dashboard-nav-item.active {
     color: #ffffff;
 }
 
@@ -709,6 +710,219 @@ h3:focus {
     white-space: nowrap;
 }
 
+.hr-topbar-actions {
+    justify-content: flex-start;
+    flex: 1;
+}
+
+.hr-primary-button,
+.hr-secondary-button,
+.hr-modal__close {
+    border: 0;
+    border-radius: 0.75rem;
+    font: inherit;
+    cursor: pointer;
+}
+
+.hr-primary-button {
+    min-height: 2.6rem;
+    padding: 0 1rem;
+    background: linear-gradient(135deg, #5aadf4, #439ce6);
+    color: #ffffff;
+    font-size: 0.86rem;
+    font-weight: 700;
+    box-shadow: 0 12px 24px rgba(67, 156, 230, 0.22);
+}
+
+.hr-secondary-button {
+    min-height: 2.6rem;
+    padding: 0 1rem;
+    background: #eef1fb;
+    color: #49516f;
+    font-size: 0.86rem;
+    font-weight: 700;
+}
+
+.hr-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: grid;
+    place-items: center;
+    padding: 1.5rem;
+    background: rgba(20, 27, 44, 0.45);
+    backdrop-filter: blur(8px);
+}
+
+.hr-modal {
+    width: min(100%, 42rem);
+    padding: 1.4rem;
+    border: 1px solid rgba(229, 232, 244, 0.95);
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: 0 24px 60px rgba(26, 33, 52, 0.18);
+}
+
+.hr-modal__header,
+.hr-modal__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.hr-modal__header {
+    margin-bottom: 1rem;
+}
+
+.hr-modal__header h3 {
+    margin: 0;
+}
+
+.hr-modal__close {
+    width: 2.2rem;
+    height: 2.2rem;
+    background: transparent;
+    color: #4d5574;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.hr-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.hr-field {
+    display: grid;
+    gap: 0.4rem;
+    align-content: start;
+}
+
+.hr-field label,
+.hr-checkbox {
+    color: #5d6582;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.hr-field input,
+.hr-field select {
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    border: 1px solid #d9dfef;
+    border-radius: 0.75rem;
+    font: inherit;
+    color: #151829;
+    background: #ffffff;
+}
+
+.hr-dropdown {
+    position: relative;
+}
+
+.hr-dropdown__trigger {
+    width: 100%;
+    min-height: 2.75rem;
+    padding: 0 0.85rem;
+    border: 1px solid #d9dfef;
+    border-radius: 0.75rem;
+    background: #ffffff;
+    color: #151829;
+    font: inherit;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(149, 161, 191, 0.08);
+}
+
+.hr-dropdown__label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hr-dropdown__chevron {
+    color: #7f88a8;
+    font-size: 0.9rem;
+    font-weight: 900;
+    line-height: 1;
+    transition: transform 160ms ease;
+}
+
+.hr-dropdown__chevron--open {
+    transform: rotate(180deg);
+}
+
+.hr-dropdown__menu {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    left: 0;
+    right: 0;
+    z-index: 5;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.45rem;
+    border: 1px solid rgba(219, 225, 240, 0.95);
+    border-radius: 0.85rem;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 18px 40px rgba(31, 39, 63, 0.14);
+    backdrop-filter: blur(12px);
+}
+
+.hr-dropdown__option {
+    min-height: 2.4rem;
+    padding: 0 0.8rem;
+    border: 0;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: #47506f;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 160ms ease, color 160ms ease;
+}
+
+.hr-dropdown__option:hover,
+.hr-dropdown__option--selected {
+    background: rgba(90, 173, 244, 0.12);
+    color: #1b4f80;
+}
+
+.validation-message {
+    color: red !important;
+    display: block;
+    min-height: 1.15rem;
+    margin-top: 0.15rem;
+    font-size: 12px !important;
+    line-height: 1.2;
+}
+
+.hr-field--full {
+    grid-column: 1 / -1;
+}
+
+.hr-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    grid-column: 1 / -1;
+    margin-top: 0.25rem;
+}
+
+.hr-checkbox input {
+    width: 1rem;
+    height: 1rem;
+}
+
+.hr-modal__actions {
+    justify-content: flex-end;
+    margin-top: 1.25rem;
+}
+
 .hr-table-button {
     min-height: 2rem;
     padding: 0 0.75rem;
@@ -722,6 +936,11 @@ h3:focus {
 .hr-table-button--danger {
     background: rgba(220, 74, 74, 0.1);
     color: #b03232;
+}
+
+.hr-table-button--warning {
+    background: rgba(234, 179, 8, 0.16);
+    color: #9a6700;
 }
 
 @media (max-width: 1080px) {
@@ -777,5 +996,9 @@ h3:focus {
 
     .dashboard-chart__bars {
         gap: 0.45rem;
+    }
+
+    .hr-modal__grid {
+        grid-template-columns: 1fr;
     }
 }

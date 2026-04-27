@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "Amazoff Full Stack",
+    "Projects": [
+      {
+        "Path": "Backend\\Amazoff.Api\\Amazoff.Api.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "Frontend\\Amazoff.Portal\\Amazoff.Portal.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

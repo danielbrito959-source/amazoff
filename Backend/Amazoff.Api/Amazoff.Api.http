@@ -1,6 +1,11 @@
 @Amazoff.Api_HostAddress = http://localhost:5289
 
-GET {{Amazoff.Api_HostAddress}}/weatherforecast/
+GET {{Amazoff.Api_HostAddress}}/
+Accept: application/json
+
+###
+
+GET {{Amazoff.Api_HostAddress}}/health/database
 Accept: application/json
 
 ###

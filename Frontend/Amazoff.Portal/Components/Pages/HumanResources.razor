@@ -1,7 +1,8 @@
 @page "/recursos-humanos"
-@rendermode InteractiveServer
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject IHttpClientFactory HttpClientFactory
-@inject IConfiguration Configuration
+@inject Amazoff.Portal.Services.CurrentUserSession CurrentUserSession
+@using System.ComponentModel.DataAnnotations
 
 <PageTitle>Recursos Humanos</PageTitle>
 
@@ -13,12 +14,12 @@
             </div>
 
             <div class="dashboard-nav-group">
-                <a class="dashboard-nav-item" href="/dashboard">
+                <NavLink class="dashboard-nav-item" href="/dashboard">
                     <span>Dashboard</span>
-                </a>
-                <a class="dashboard-nav-item" href="/produtos">
+                </NavLink>
+                <NavLink class="dashboard-nav-item" href="/produtos">
                     <span>Produtos</span>
-                </a>
+                </NavLink>
             </div>
 
             <div class="dashboard-nav-group">
@@ -34,30 +35,22 @@
                 <div class="dashboard-nav-item">
                     <span>Marketing</span>
                 </div>
-                <a class="dashboard-nav-item dashboard-nav-item--active" href="/recursos-humanos">
+                <NavLink class="dashboard-nav-item" href="/recursos-humanos" Match="NavLinkMatch.All">
                     <span>Recursos Humanos</span>
-                </a>
+                </NavLink>
             </div>
 
-            <div class="dashboard-upgrade-card">
-                <p class="dashboard-upgrade-card__title">Equipa</p>
-                <p class="dashboard-upgrade-card__text">Gerir colaboradores, acessos e estado da equipa num unico sitio.</p>
-            </div>
         </aside>
 
         <div class="dashboard-content">
             <header class="dashboard-topbar">
-                <div class="dashboard-topbar__left">
-                    <button class="dashboard-menu-button" type="button" aria-label="Open menu">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </button>
-
-                    <div>
-                        <p class="dashboard-breadcrumbs">Home / Recursos Humanos / Equipa</p>
-                        <h2>Recursos Humanos</h2>
-                    </div>
+                <div class="dashboard-topbar__left hr-topbar-actions">
+                    @if (CanCreateEmployee)
+                    {
+                        <button type="button" class="hr-primary-button" @onclick="OpenCreateModal">
+                            Adicionar colaborador
+                        </button>
+                    }
                 </div>
 
                 <div class="dashboard-topbar__right">
@@ -98,8 +91,7 @@
                                         <th>Nome</th>
                                         <th>Username</th>
                                         <th>Email</th>
-                                        <th>Image path</th>
-                                        <th>Estado</th>
+                                        <th>Cargo</th>
                                         <th>Ultimo login</th>
                                         <th></th>
                                     </tr>
@@ -123,15 +115,14 @@
                                             <td>@employee.FullName</td>
                                             <td>@employee.Username</td>
                                             <td>@employee.Email</td>
-                                            <td class="hr-image-path">@(employee.ImagePath ?? "-")</td>
-                                            <td>
-                                                <span class="@(employee.IsActive ? "hr-badge" : "hr-badge hr-badge--inactive")">
-                                                    @(employee.IsActive ? "Ativo" : "Inativo")
-                                                </span>
-                                            </td>
+                                            <td>@(employee.RoleName ?? "-")</td>
                                             <td>@(employee.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
                                             <td class="hr-table-actions">
-                                                <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => DeleteEmployeeAsync(employee)">Remover</button>
+                                                @if (CanCreateEmployee)
+                                                {
+                                                    <button type="button" class="hr-table-button hr-table-button--warning">Alterar</button>
+                                                    <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => DeleteEmployeeAsync(employee)">Remover</button>
+                                                }
                                             </td>
                                         </tr>
                                     }
@@ -152,16 +143,119 @@
     </div>
 </section>
 
+@if (IsCreateModalOpen)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseCreateModal">
+        <div class="hr-modal" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <div>
+                    <h3>Criar colaborador</h3>
+                </div>
+
+                <button type="button" class="hr-modal__close" @onclick="CloseCreateModal">x</button>
+            </div>
+
+            <EditForm Model="CreateEmployeeModel" OnValidSubmit="CreateEmployeeAsync">
+                <DataAnnotationsValidator />
+                <div class="hr-modal__grid">
+                    <div class="hr-field">
+                        <label for="first-name">Nome*</label>
+                        <InputText id="first-name" @bind-Value="CreateEmployeeModel.FirstName" />
+                        <ValidationMessage For="() => CreateEmployeeModel.FirstName" />
+                    </div>
+
+                    <div class="hr-field">
+                        <label for="last-name">Apelido*</label>
+                        <InputText id="last-name" @bind-Value="CreateEmployeeModel.LastName" />
+                        <ValidationMessage For="() => CreateEmployeeModel.LastName" />
+                    </div>
+
+                    <div class="hr-field">
+                        <label for="username">Username*</label>
+                        <InputText id="username" @bind-Value="CreateEmployeeModel.Username" />
+                        <ValidationMessage For="() => CreateEmployeeModel.Username" />
+                    </div>
+
+                    <div class="hr-field">
+                        <label for="password">Password*</label>
+                        <InputText id="password" type="password" @bind-Value="CreateEmployeeModel.Password" />
+                        <ValidationMessage For="() => CreateEmployeeModel.Password" />
+                    </div>
+
+                    <div class="hr-field">
+                        <label for="email">Email*</label>
+                        <InputText id="email" @bind-Value="CreateEmployeeModel.Email" />
+                        <ValidationMessage For="() => CreateEmployeeModel.Email" />
+                    </div>
+
+                    <div class="hr-field">
+                        <label>Role*</label>
+                        <div class="hr-dropdown">
+                            <button type="button"
+                                    class="hr-dropdown__trigger"
+                                    @onclick="ToggleRoleDropdown">
+                                <span class="hr-dropdown__label">@(SelectedRoleLabel)</span>
+                                <i class="fa-solid fa-caret-down hr-dropdown__chevron @(IsRoleDropdownOpen ? "hr-dropdown__chevron--open" : null)" aria-hidden="true"></i>
+                            </button>
+
+                            @if (IsRoleDropdownOpen)
+                            {
+                                <div class="hr-dropdown__menu">
+                                    <button type="button"
+                                            class="hr-dropdown__option @(CreateEmployeeModel.RoleId is null ? "hr-dropdown__option--selected" : null)"
+                                            @onclick='() => SelectRole(null, "Selecionar role")'>
+                                        Selecionar role
+                                    </button>
+
+                                    @foreach (var role in Roles)
+                                    {
+                                        <button type="button"
+                                                class="hr-dropdown__option @(CreateEmployeeModel.RoleId == role.Id ? "hr-dropdown__option--selected" : null)"
+                                                @onclick='() => SelectRole(role.Id, role.Name)'>
+                                            @role.Name
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <ValidationMessage For="() => CreateEmployeeModel.RoleId" />
+                    </div>
+                </div>
+
+                <div class="hr-modal__actions">
+                    <button type="button" class="hr-secondary-button" @onclick="CloseCreateModal">Cancelar</button>
+                    <button type="submit" class="hr-primary-button" disabled="@IsBusy">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
 @code {
     private readonly List<EmployeeViewModel> Employees = [];
+    private readonly List<RoleOptionViewModel> Roles = [];
+    private CreateEmployeeViewModel CreateEmployeeModel { get; set; } = new();
+    private Amazoff.Portal.Services.CurrentUserDto? CurrentUser { get; set; }
     private string? StatusMessage { get; set; }
     private bool HasError { get; set; }
     private bool IsBusy { get; set; }
     private bool IsLoading { get; set; } = true;
+    private bool IsCreateModalOpen { get; set; }
+    private bool IsRoleDropdownOpen { get; set; }
+    private bool CanCreateEmployee => CurrentUser?.RoleId is 1 or 2;
+    private string SelectedRoleLabel { get; set; } = "Selecionar role";
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        CurrentUser = await CurrentUserSession.GetAsync();
+        await LoadRolesAsync();
         await LoadEmployeesAsync();
+        StateHasChanged();
     }
 
     private async Task LoadEmployeesAsync()
@@ -188,6 +282,26 @@
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task LoadRolesAsync()
+    {
+        try
+        {
+            var roles = await SendApiRequestAsync(async client =>
+                await client.GetFromJsonAsync<List<RoleOptionViewModel>>("/roles"));
+
+            Roles.Clear();
+
+            if (roles is not null)
+            {
+                Roles.AddRange(roles);
+            }
+        }
+        catch (Exception)
+        {
+            Roles.Clear();
         }
     }
 
@@ -225,64 +339,124 @@
 
     private async Task<T> SendApiRequestAsync<T>(Func<HttpClient, Task<T>> request)
     {
-        Exception? lastError = null;
-
-        foreach (var baseUrl in GetApiBaseUrls())
-        {
-            try
-            {
-                var client = HttpClientFactory.CreateClient();
-                client.BaseAddress = new Uri(baseUrl);
-
-                return await request(client);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                lastError = ex;
-            }
-        }
-
-        throw lastError ?? new HttpRequestException("Nao foi possivel ligar a API.");
+        var client = HttpClientFactory.CreateClient("AmazoffApi");
+        return await request(client);
     }
 
-    private IEnumerable<string> GetApiBaseUrls()
+    private void OpenCreateModal()
     {
-        var urls = new[]
+        CreateEmployeeModel = new CreateEmployeeViewModel
         {
-            Configuration["Api:BaseUrl"],
-            "https://localhost:44389",
-            "http://localhost:65097",
-            "https://localhost:7289",
-            "http://localhost:5289"
+            IsActive = true
         };
+        SelectedRoleLabel = "Selecionar role";
+        IsRoleDropdownOpen = false;
+        IsCreateModalOpen = true;
+        StatusMessage = null;
+        HasError = false;
+    }
 
-        return urls
-            .Where(url => !string.IsNullOrWhiteSpace(url))
-            .Distinct(StringComparer.OrdinalIgnoreCase)!;
+    private void CloseCreateModal()
+    {
+        IsCreateModalOpen = false;
+        IsRoleDropdownOpen = false;
+    }
+
+    private void ToggleRoleDropdown()
+    {
+        IsRoleDropdownOpen = !IsRoleDropdownOpen;
+    }
+
+    private void SelectRole(int? roleId, string roleName)
+    {
+        CreateEmployeeModel.RoleId = roleId;
+        SelectedRoleLabel = roleName;
+        IsRoleDropdownOpen = false;
+    }
+
+    private async Task CreateEmployeeAsync()
+    {
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            var response = await SendApiRequestAsync(client => client.PostAsJsonAsync("/employees", CreateEmployeeModel));
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseCreateModal();
+                StatusMessage = "Trabalhador criado com sucesso.";
+                await LoadEmployeesAsync();
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel criar o trabalhador.";
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel criar o trabalhador.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     private sealed class EmployeeViewModel
     {
-        public string Id { get; set; } = string.Empty;
+        public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string? RoleName { get; set; }
         public string? ImagePath { get; set; }
         public bool IsActive { get; set; }
+        public int? RoleId { get; set; }
         public DateTime? LastLoginAt { get; set; }
 
-        public string FullName => string.Join(" ", new[] { FirstName, LastName }.Where(value => !string.IsNullOrWhiteSpace(value))).Trim() switch
-        {
-            "" => Username,
-            var name => name
-        };
+        public string FullName => $"{FirstName} {LastName}".Trim();
 
         public string Initials =>
-            string.Concat((FirstName ?? Username)
+            string.Concat((string.IsNullOrWhiteSpace(FirstName) ? Username : FirstName)
                 .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                 .Take(2)
                 .Select(part => char.ToUpperInvariant(part[0])));
+    }
+
+    private sealed class RoleOptionViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class CreateEmployeeViewModel
+    {
+        [Required(ErrorMessage = "O username é obrigatório.")]
+        public string Username { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "O email é obrigatório.")]
+        [EmailAddress(ErrorMessage = "Indica um email válido.")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A password é obrigatória.")]
+        public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "O nome é obrigatório.")]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "O apelido é obrigatório.")]
+        public string LastName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A role é obrigatória.")]
+        public int? RoleId { get; set; }
+
+        public bool IsActive { get; set; } = true;
     }
 
     private sealed record ApiMessageResponse(string Message);

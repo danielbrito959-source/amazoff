@@ -1,0 +1,9 @@
+USE amazoff;
+
+CREATE TABLE IF NOT EXISTS roles (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    role VARCHAR(80) NOT NULL DEFAULT 'user',
+    PRIMARY KEY (id)
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_unicode_ci;

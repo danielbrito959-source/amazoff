@@ -1,10 +1,14 @@
 using Amazoff.Portal.Components;
+using Amazoff.Portal.Services;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddScoped<ProtectedSessionStorage>();
+builder.Services.AddScoped<CurrentUserSession>();
 
 builder.Services.AddHttpClient("AmazoffApi", client =>
 {

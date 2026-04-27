@@ -1,6 +1,8 @@
 @page "/"
 @rendermode InteractiveServer
 @inject IHttpClientFactory HttpClientFactory
+@inject NavigationManager NavigationManager
+@inject Amazoff.Portal.Services.CurrentUserSession CurrentUserSession
 
 <PageTitle>Amazoff Portal</PageTitle>
 
@@ -59,7 +61,7 @@
                                 <button type="button"
                                         @onclick="BackToUsername"
                                         disabled="@IsLoading"
-                                        class="mt-3 text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
+                                        class="mt-[5px] pl-[5px] text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
                                     Alterar utilizador
                                 </button>
                             </div>
@@ -102,10 +104,10 @@
 
     private async Task HandleLoginAsync()
     {
-        if (CurrentStep == LoginStep.Password)
+        if (CurrentStep == LoginStep.Password && string.IsNullOrWhiteSpace(LoginModel.Password))
         {
-            StatusMessage = "Password recebida. A validacao da password fica para o proximo passo.";
-            IsError = false;
+            StatusMessage = "Indica a password.";
+            IsError = true;
             return;
         }
 
@@ -122,20 +124,51 @@
 
         try
         {
-            var httpClient = HttpClientFactory.CreateClient("AmazoffApi");
-            var response = await httpClient.PostAsJsonAsync("/auth/login", new LoginRequest(LoginModel.Username.Trim()));
+            var response = await TryValidateUserAsync(LoginModel.Username.Trim());
 
             if (response.IsSuccessStatusCode)
             {
+                if (CurrentStep == LoginStep.Password)
+                {
+                    var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+                    if (loginResult?.User is not null)
+                    {
+                        await CurrentUserSession.SetAsync(new Amazoff.Portal.Services.CurrentUserDto(
+                            loginResult.User.Id,
+                            loginResult.User.Username,
+                            loginResult.User.Email,
+                            loginResult.User.RoleId,
+                            loginResult.User.FirstName,
+                            loginResult.User.LastName));
+                    }
+
+                    NavigationManager.NavigateTo("/dashboard");
+                    return;
+                }
+
                 CurrentStep = LoginStep.Password;
                 LoginModel.Password = null;
-                StatusMessage = null;
                 return;
             }
 
-            StatusMessage = response.StatusCode == System.Net.HttpStatusCode.NotFound
-                ? "Utilizador não encontrado."
-                : "Nao foi possivel validar o utilizador.";
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                StatusMessage = "Utilizador nao encontrado.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized && CurrentStep == LoginStep.Password)
+            {
+                StatusMessage = "Password incorreta.";
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            {
+                StatusMessage = "Utilizador sem acesso.";
+            }
+            else
+            {
+                StatusMessage = "Nao foi possivel validar o utilizador.";
+            }
+
             IsError = true;
         }
         catch (HttpRequestException)
@@ -147,6 +180,15 @@
         {
             IsLoading = false;
         }
+    }
+
+    private async Task<HttpResponseMessage> TryValidateUserAsync(string username)
+    {
+        var httpClient = HttpClientFactory.CreateClient("AmazoffApi");
+
+        return await httpClient.PostAsJsonAsync(
+            "/auth/login",
+            new LoginRequest(username, CurrentStep == LoginStep.Password ? LoginModel.Password : null));
     }
 
     private void BackToUsername()
@@ -169,5 +211,15 @@
         public string? Password { get; set; }
     }
 
-    private sealed record LoginRequest(string Username);
+    private sealed record LoginRequest(string Username, string? Password);
+
+    private sealed record LoginResponse(bool Success, string Message, LoginUserResponse? User);
+
+    private sealed record LoginUserResponse(
+        int Id,
+        string Username,
+        string Email,
+        int? RoleId,
+        string FirstName,
+        string LastName);
 }
