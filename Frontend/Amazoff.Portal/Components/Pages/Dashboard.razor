@@ -1,4 +1,5 @@
 @page "/dashboard"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
 
 <PageTitle>Dashboard</PageTitle>
 
@@ -34,6 +35,7 @@
                 <NavLink class="dashboard-nav-item" href="/recursos-humanos">
                     <span>Recursos Humanos</span>
                 </NavLink>
+                <LogoutMenuButton />
             </div>
 
             <div class="dashboard-upgrade-card">
@@ -58,17 +60,7 @@
                 </div>
 
                 <div class="dashboard-topbar__right">
-                    <div class="dashboard-alert">
-                        <span class="dashboard-alert__dot"></span>
-                    </div>
-
-                    <div class="dashboard-profile">
-                        <div class="dashboard-profile__avatar">DB</div>
-                        <div>
-                            <p class="dashboard-profile__name">Daniel Brito</p>
-                            <p class="dashboard-profile__role">Administrador</p>
-                        </div>
-                    </div>
+                    <CurrentUserProfile />
                 </div>
             </header>
 

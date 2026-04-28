@@ -1,0 +1,48 @@
+@inject Amazoff.Portal.Services.CurrentUserSession CurrentUserSession
+
+<div class="dashboard-profile">
+    <div class="dashboard-profile__avatar">@CurrentUserInitials</div>
+    <div class="dashboard-profile__copy">
+        <p class="dashboard-profile__name">Bem-vindo, @CurrentUserDisplayName</p>
+        <p class="dashboard-profile__role">@CurrentUserRoleName</p>
+    </div>
+</div>
+
+@code {
+    private Amazoff.Portal.Services.CurrentUserDto? CurrentUser { get; set; }
+
+    private string CurrentUserDisplayName => GetCurrentUserDisplayName();
+
+    private string CurrentUserRoleName => string.IsNullOrWhiteSpace(CurrentUser?.RoleName)
+        ? "Utilizador"
+        : CurrentUser.RoleName;
+
+    private string CurrentUserInitials =>
+        string.Concat((string.IsNullOrWhiteSpace(CurrentUserDisplayName) ? CurrentUser?.Username : CurrentUserDisplayName)
+            ?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Take(2)
+            .Select(part => char.ToUpperInvariant(part[0])) ?? []);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        CurrentUser = await CurrentUserSession.GetAsync();
+        StateHasChanged();
+    }
+
+    private string GetCurrentUserDisplayName()
+    {
+        var fullName = string.Join(
+            " ",
+            new[] { CurrentUser?.FirstName, CurrentUser?.LastName }
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+
+        return string.IsNullOrWhiteSpace(fullName)
+            ? CurrentUser?.Username ?? "utilizador"
+            : fullName;
+    }
+}

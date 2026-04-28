@@ -28,5 +28,6 @@ public sealed record CurrentUserDto(
     string Username,
     string Email,
     int? RoleId,
+    string? RoleName,
     string FirstName,
     string LastName);

@@ -22,6 +22,7 @@ public sealed class AuthController(AmazoffDbContext dbContext) : ControllerBase
 
         var user = await dbContext.Users
             .AsTracking()
+            .Include(currentUser => currentUser.Role)
             .FirstOrDefaultAsync(
                 currentUser => currentUser.Username == request.Username.Trim(),
                 cancellationToken);
@@ -57,6 +58,7 @@ public sealed class AuthController(AmazoffDbContext dbContext) : ControllerBase
             user.Username,
             user.Email,
             user.RoleId,
+            user.Role?.Name,
             user.FirstName,
             user.LastName);
 

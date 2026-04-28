@@ -47,6 +47,76 @@ h3:focus {
     top: 0.5rem;
 }
 
+.amazoff-toast-stack {
+    position: fixed;
+    top: 1.25rem;
+    right: 1.25rem;
+    z-index: 1200;
+    display: grid;
+    gap: 0.75rem;
+    width: min(24rem, calc(100vw - 2rem));
+}
+
+.amazoff-toast {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.9rem;
+    padding: 0.95rem 1rem;
+    border-radius: 0.9rem;
+    color: #ffffff;
+    box-shadow: 0 20px 42px rgba(18, 24, 38, 0.18);
+    backdrop-filter: blur(12px);
+    animation: amazoff-toast-enter 180ms ease-out;
+}
+
+.amazoff-toast--success {
+    background: linear-gradient(135deg, rgba(30, 146, 93, 0.96), rgba(42, 170, 114, 0.96));
+}
+
+.amazoff-toast--error {
+    background: linear-gradient(135deg, rgba(191, 59, 59, 0.96), rgba(223, 84, 84, 0.96));
+}
+
+.amazoff-toast--closing {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.amazoff-toast__message {
+    line-height: 1.45;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.amazoff-toast__close {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.84;
+}
+
+.amazoff-toast__close:hover {
+    opacity: 1;
+}
+
+@keyframes amazoff-toast-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .dashboard-shell {
     min-height: 100vh;
     padding: 0;
@@ -171,6 +241,15 @@ h3:focus {
     transition: transform 160ms ease, background 160ms ease, color 160ms ease;
 }
 
+.dashboard-nav-button {
+    width: 100%;
+    border: 0;
+    background: none;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
 .dashboard-nav-item:hover {
     background: rgba(255, 255, 255, 0.05);
     color: #ffffff;
@@ -246,6 +325,20 @@ h3:focus {
 .dashboard-topbar__left,
 .dashboard-topbar__right {
     gap: 1rem;
+}
+
+.dashboard-profile {
+    gap: 0.85rem;
+}
+
+.dashboard-profile__copy {
+    display: grid;
+    gap: 0.05rem;
+}
+
+.dashboard-profile__name {
+    font-weight: 500;
+    margin-bottom: 0;
 }
 
 .dashboard-topbar h2 {
@@ -743,6 +836,16 @@ h3:focus {
     font-weight: 700;
 }
 
+.hr-secondary-button--danger {
+    background: rgba(220, 74, 74, 0.1);
+    color: #b03232;
+}
+
+.hr-secondary-button--success {
+    background: rgba(59, 178, 115, 0.14);
+    color: #1d8a55;
+}
+
 .hr-modal-backdrop {
     position: fixed;
     inset: 0;
@@ -761,6 +864,10 @@ h3:focus {
     border-radius: 1rem;
     background: #ffffff;
     box-shadow: 0 24px 60px rgba(26, 33, 52, 0.18);
+}
+
+.hr-modal--confirm {
+    width: min(100%, 30rem);
 }
 
 .hr-modal__header,
@@ -816,6 +923,112 @@ h3:focus {
     font: inherit;
     color: #151829;
     background: #ffffff;
+}
+
+.hr-field-hint {
+    color: #6d7593;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.hr-password-field {
+    position: relative;
+}
+
+.hr-password-field__input {
+    width: 100%;
+    padding-right: 2.9rem !important;
+}
+
+.hr-password-field__toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.75rem;
+    transform: translateY(-50%);
+    border: 0;
+    background: transparent;
+    color: #7f88a8;
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 0;
+}
+
+.hr-password-field__toggle:hover {
+    color: #4f5a80;
+}
+
+.hr-field--avatar-simple {
+    justify-items: center;
+    margin-bottom: 0.15rem;
+    gap: 0.6rem;
+}
+
+.hr-photo-picker {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+    transition: transform 160ms ease;
+}
+
+.hr-photo-picker:hover {
+    transform: translateY(-1px);
+}
+
+.hr-photo-picker__preview,
+.hr-photo-picker__fallback {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 999px;
+    border: 2px solid rgba(217, 223, 239, 0.9);
+}
+
+.hr-photo-picker__preview {
+    object-fit: cover;
+    background: #eef1fb;
+    box-shadow: 0 10px 24px rgba(76, 91, 131, 0.14);
+}
+
+.hr-photo-picker__fallback {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #7b75ff, #635cf2);
+    color: #ffffff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    box-shadow: 0 10px 24px rgba(76, 91, 131, 0.14);
+}
+
+.hr-photo-picker__overlay {
+    position: absolute;
+    right: -0.1rem;
+    bottom: -0.1rem;
+    display: grid;
+    place-items: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #4a74d8;
+    box-shadow: 0 6px 18px rgba(50, 64, 108, 0.2);
+}
+
+.hr-photo-picker__input {
+    display: none;
+}
+
+.hr-photo-remove-button {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: #657095;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.hr-photo-remove-button:hover {
+    color: #bf4949;
 }
 
 .hr-dropdown {
@@ -923,6 +1136,14 @@ h3:focus {
     margin-top: 1.25rem;
 }
 
+.hr-confirm-employee {
+    margin: 0.85rem 0 0;
+    color: #3f4867;
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+
 .hr-table-button {
     min-height: 2rem;
     padding: 0 0.75rem;
@@ -941,6 +1162,11 @@ h3:focus {
 .hr-table-button--warning {
     background: rgba(234, 179, 8, 0.16);
     color: #9a6700;
+}
+
+.hr-table-button--success {
+    background: rgba(59, 178, 115, 0.14);
+    color: #1d8a55;
 }
 
 @media (max-width: 1080px) {

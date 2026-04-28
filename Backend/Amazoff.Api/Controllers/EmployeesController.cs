@@ -13,6 +13,13 @@ namespace Amazoff.Api.Controllers;
 [Route("employees")]
 public sealed class EmployeesController(AmazoffDbContext dbContext) : ControllerBase
 {
+    private static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg",
+        ".jpeg",
+        ".png"
+    };
+
     [HttpGet]
     public async Task<ActionResult<List<EmployeeResponse>>> GetEmployees(CancellationToken cancellationToken)
     {
@@ -82,6 +89,56 @@ public sealed class EmployeesController(AmazoffDbContext dbContext) : Controller
         return Created($"/employees/{employee.Id}", employee);
     }
 
+    [HttpPost("{id:int}/photo")]
+    [RequestSizeLimit(5_000_000)]
+    public async Task<ActionResult<EmployeePhotoUploadResponse>> UploadEmployeePhoto(
+        int id,
+        IFormFile file,
+        CancellationToken cancellationToken)
+    {
+        var user = await dbContext.Users.FirstOrDefaultAsync(currentUser => currentUser.Id == id, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new ApiMessageResponse("Trabalhador nao encontrado."));
+        }
+
+        if (file.Length == 0)
+        {
+            return BadRequest(new ApiMessageResponse("A imagem enviada esta vazia."));
+        }
+
+        var extension = Path.GetExtension(file.FileName);
+
+        if (!AllowedImageExtensions.Contains(extension))
+        {
+            return BadRequest(new ApiMessageResponse("Formato de imagem invalido. Usa PNG, JPG ou JPEG."));
+        }
+
+        var uploadsRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "users");
+        Directory.CreateDirectory(uploadsRoot);
+
+        var fileName = $"user-{id}-{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
+        var filePath = Path.Combine(uploadsRoot, fileName);
+
+        await using (var stream = System.IO.File.Create(filePath))
+        {
+            await file.CopyToAsync(stream, cancellationToken);
+        }
+
+        var previousImagePath = user.ImagePath;
+
+        user.ImagePath = $"/uploads/users/{fileName}";
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (!string.Equals(previousImagePath, user.ImagePath, StringComparison.OrdinalIgnoreCase))
+        {
+            DeleteStoredUserImage(previousImagePath);
+        }
+
+        return Ok(new EmployeePhotoUploadResponse(user.ImagePath));
+    }
+
     [HttpPut("{id:int}")]
     public async Task<ActionResult<EmployeeResponse>> UpdateEmployee(
         int id,
@@ -109,6 +166,8 @@ public sealed class EmployeesController(AmazoffDbContext dbContext) : Controller
             return NotFound(new ApiMessageResponse("Trabalhador nao encontrado."));
         }
 
+        var previousImagePath = user.ImagePath;
+
         user.Username = request.Username.Trim();
         user.Email = request.Email.Trim();
         user.FirstName = request.FirstName!.Trim();
@@ -131,6 +190,11 @@ public sealed class EmployeesController(AmazoffDbContext dbContext) : Controller
             return Conflict(new ApiMessageResponse("Ja existe um utilizador com esse username ou email."));
         }
 
+        if (!string.IsNullOrWhiteSpace(previousImagePath) && string.IsNullOrWhiteSpace(user.ImagePath))
+        {
+            DeleteStoredUserImage(previousImagePath);
+        }
+
         var employee = await EmployeeService.GetEmployeeByIdAsync(dbContext, id, cancellationToken);
 
         if (employee is null)
@@ -151,9 +215,46 @@ public sealed class EmployeesController(AmazoffDbContext dbContext) : Controller
             return NotFound(new ApiMessageResponse("Trabalhador nao encontrado."));
         }
 
-        dbContext.Users.Remove(user);
+        user.IsActive = false;
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return Ok(new ApiMessageResponse("Trabalhador removido com sucesso."));
+        return Ok(new ApiMessageResponse("Trabalhador desativado com sucesso."));
+    }
+
+    [HttpPost("{id:int}/activate")]
+    public async Task<ActionResult<ApiMessageResponse>> ActivateEmployee(int id, CancellationToken cancellationToken)
+    {
+        var user = await dbContext.Users.FirstOrDefaultAsync(currentUser => currentUser.Id == id, cancellationToken);
+
+        if (user is null)
+        {
+            return NotFound(new ApiMessageResponse("Trabalhador nao encontrado."));
+        }
+
+        user.IsActive = true;
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Ok(new ApiMessageResponse("Trabalhador incluído com sucesso."));
+    }
+    private static void DeleteStoredUserImage(string? imagePath)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath) || !imagePath.StartsWith("/uploads/users/", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var fileName = Path.GetFileName(imagePath);
+
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            return;
+        }
+
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "users", fileName);
+
+        if (System.IO.File.Exists(filePath))
+        {
+            System.IO.File.Delete(filePath);
+        }
     }
 }

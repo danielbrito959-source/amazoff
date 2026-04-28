@@ -5,5 +5,6 @@ public sealed record LoginUserResponse(
     string Username,
     string Email,
     int? RoleId,
+    string? RoleName,
     string FirstName,
     string LastName);

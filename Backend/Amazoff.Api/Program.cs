@@ -1,5 +1,6 @@
 using Amazoff.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,16 @@ builder.Services.AddDbContext<AmazoffDbContext>((serviceProvider, options) =>
         throw new InvalidOperationException("Connection string 'AmazoffDb' is not configured.");
     }
 
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+    var connectionStringBuilder = new MySqlConnectionStringBuilder(connectionString);
+
+    if (connectionStringBuilder.SslMode == MySqlSslMode.Preferred)
+    {
+        connectionStringBuilder.SslMode = MySqlSslMode.None;
+    }
+
+    var normalizedConnectionString = connectionStringBuilder.ConnectionString;
+
+    options.UseMySql(normalizedConnectionString, ServerVersion.AutoDetect(normalizedConnectionString));
 });
 
 builder.Services.AddCors(options =>
@@ -35,6 +45,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AmazoffDbContext>();
+    await DatabaseSchemaBootstrapper.EnsureIdentityColumnsAsync(dbContext);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -44,6 +60,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+app.UseStaticFiles();
 app.UseCors("Portal");
 app.MapControllers();
 

@@ -1,8 +1,10 @@
 @page "/recursos-humanos"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
 @inject Amazoff.Portal.Services.CurrentUserSession CurrentUserSession
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Recursos Humanos</PageTitle>
 
@@ -38,6 +40,7 @@
                 <NavLink class="dashboard-nav-item" href="/recursos-humanos" Match="NavLinkMatch.All">
                     <span>Recursos Humanos</span>
                 </NavLink>
+                <LogoutMenuButton />
             </div>
 
         </aside>
@@ -54,13 +57,7 @@
                 </div>
 
                 <div class="dashboard-topbar__right">
-                    <div class="dashboard-profile">
-                        <div class="dashboard-profile__avatar">RH</div>
-                        <div>
-                            <p class="dashboard-profile__name">Gestao de colaboradores</p>
-                            <p class="dashboard-profile__role">Criar, editar e remover utilizadores</p>
-                        </div>
-                    </div>
+                    <CurrentUserProfile />
                 </div>
             </header>
 
@@ -92,6 +89,10 @@
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th>Cargo</th>
+                                        @if (CanCreateEmployee)
+                                        {
+                                            <th>Ativo</th>
+                                        }
                                         <th>Ultimo login</th>
                                         <th></th>
                                     </tr>
@@ -103,7 +104,7 @@
                                             <td>
                                                 @if (!string.IsNullOrWhiteSpace(employee.ImagePath))
                                                 {
-                                                    <img src="@employee.ImagePath"
+                                                    <img src="@ResolveImageUrl(employee.ImagePath)"
                                                          alt="@employee.FullName"
                                                          class="hr-avatar-image" />
                                                 }
@@ -116,12 +117,27 @@
                                             <td>@employee.Username</td>
                                             <td>@employee.Email</td>
                                             <td>@(employee.RoleName ?? "-")</td>
+                                            @if (CanCreateEmployee)
+                                            {
+                                                <td>
+                                                    <span class="hr-badge @(employee.IsActive ? null : "hr-badge--inactive")">
+                                                        @(employee.IsActive ? "Ativo" : "Inativo")
+                                                    </span>
+                                                </td>
+                                            }
                                             <td>@(employee.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
                                             <td class="hr-table-actions">
                                                 @if (CanCreateEmployee)
                                                 {
-                                                    <button type="button" class="hr-table-button hr-table-button--warning">Alterar</button>
-                                                    <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => DeleteEmployeeAsync(employee)">Remover</button>
+                                                    <button type="button" class="hr-table-button hr-table-button--warning" @onclick="() => OpenEditModal(employee)">Alterar</button>
+                                                    @if (employee.IsActive)
+                                                    {
+                                                        <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => OpenDeleteModal(employee)">Remover</button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button type="button" class="hr-table-button hr-table-button--success" @onclick="() => OpenActivateModal(employee)">Incluir</button>
+                                                    }
                                                 }
                                             </td>
                                         </tr>
@@ -149,15 +165,46 @@
         <div class="hr-modal" @onclick:stopPropagation="true">
             <div class="hr-modal__header">
                 <div>
-                    <h3>Criar colaborador</h3>
+                    <h3>@EmployeeModalTitle</h3>
                 </div>
 
                 <button type="button" class="hr-modal__close" @onclick="CloseCreateModal">x</button>
             </div>
 
-            <EditForm Model="CreateEmployeeModel" OnValidSubmit="CreateEmployeeAsync">
+            <EditForm Model="CreateEmployeeModel" OnSubmit="SaveEmployeeAsync">
                 <DataAnnotationsValidator />
                 <div class="hr-modal__grid">
+                    @if (IsEditingEmployee)
+                    {
+                        <div class="hr-field hr-field--full hr-field--avatar-simple">
+                            <label for="employee-photo" class="hr-photo-picker" title="Carregar foto">
+                                @if (!string.IsNullOrWhiteSpace(CurrentEmployeePhotoPreview))
+                                {
+                                    <img src="@CurrentEmployeePhotoPreview" alt="@CreateEmployeeModel.Username" class="hr-photo-picker__preview" />
+                                }
+                                else
+                                {
+                                    <div class="hr-photo-picker__fallback">@CreateEmployeeInitials</div>
+                                }
+
+                                <span class="hr-photo-picker__overlay">
+                                    <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                                </span>
+                            </label>
+                            <InputFile id="employee-photo"
+                                       OnChange="UploadEmployeePhotoAsync"
+                                       accept=".png,.jpg,.jpeg"
+                                       class="hr-photo-picker__input" />
+
+                            @if (HasEmployeePhoto)
+                            {
+                                <button type="button" class="hr-photo-remove-button" @onclick="RemoveEmployeePhotoSelection">
+                                    Remover foto
+                                </button>
+                            }
+                        </div>
+                    }
+
                     <div class="hr-field">
                         <label for="first-name">Nome*</label>
                         <InputText id="first-name" @bind-Value="CreateEmployeeModel.FirstName" />
@@ -177,9 +224,27 @@
                     </div>
 
                     <div class="hr-field">
-                        <label for="password">Password*</label>
-                        <InputText id="password" type="password" @bind-Value="CreateEmployeeModel.Password" />
-                        <ValidationMessage For="() => CreateEmployeeModel.Password" />
+                        <label for="password">Password@(IsEditingEmployee ? string.Empty : "*")</label>
+                        <div class="hr-password-field">
+                            <InputText id="password"
+                                       type="@PasswordInputType"
+                                       @bind-Value="CreateEmployeeModel.Password"
+                                       class="hr-password-field__input" />
+                            <button type="button"
+                                    class="hr-password-field__toggle"
+                                    @onclick="TogglePasswordVisibility"
+                                    aria-label="Mostrar ou esconder password">
+                                <i class="fa-solid @(IsPasswordVisible ? "fa-eye-slash" : "fa-eye")" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(PasswordValidationMessage))
+                        {
+                            <span class="validation-message">@PasswordValidationMessage</span>
+                        }
+                        else if (IsEditingEmployee)
+                        {
+                            <span class="hr-field-hint">Deixa em branco para manter a password atual.</span>
+                        }
                     </div>
 
                     <div class="hr-field">
@@ -224,9 +289,59 @@
 
                 <div class="hr-modal__actions">
                     <button type="button" class="hr-secondary-button" @onclick="CloseCreateModal">Cancelar</button>
-                    <button type="submit" class="hr-primary-button" disabled="@IsBusy">Guardar</button>
+                    <button type="submit" class="hr-primary-button" disabled="@IsBusy">@EmployeeModalSubmitLabel</button>
                 </div>
             </EditForm>
+        </div>
+    </div>
+}
+
+@if (IsDeleteModalOpen && EmployeePendingDeletion is not null)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseDeleteModal">
+        <div class="hr-modal hr-modal--confirm" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <div>
+                    <h3>Confirmar remoção</h3>
+                </div>
+
+                <button type="button" class="hr-modal__close" @onclick="CloseDeleteModal">x</button>
+            </div>
+
+            <p class="dashboard-copy">Tem a certeza que deseja remover este colaborador?</p>
+            <p class="hr-confirm-employee">@EmployeePendingDeletion.FullName (@(EmployeePendingDeletion.RoleName ?? "-"))</p>
+
+            <div class="hr-modal__actions">
+                <button type="button" class="hr-secondary-button" @onclick="CloseDeleteModal">Cancelar</button>
+                <button type="button" class="hr-secondary-button hr-secondary-button--danger" @onclick="ConfirmDeleteEmployeeAsync" disabled="@IsBusy">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (IsActivateModalOpen && EmployeePendingActivation is not null)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseActivateModal">
+        <div class="hr-modal hr-modal--confirm" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <div>
+                    <h3>Confirmar inclusão</h3>
+                </div>
+
+                <button type="button" class="hr-modal__close" @onclick="CloseActivateModal">x</button>
+            </div>
+
+            <p class="dashboard-copy">Tem a certeza que deseja incluir este colaborador?</p>
+            <p class="hr-confirm-employee">@EmployeePendingActivation.FullName (@(EmployeePendingActivation.RoleName ?? "-"))</p>
+
+            <div class="hr-modal__actions">
+                <button type="button" class="hr-secondary-button" @onclick="CloseActivateModal">Cancelar</button>
+                <button type="button" class="hr-secondary-button hr-secondary-button--success" @onclick="ConfirmActivateEmployeeAsync" disabled="@IsBusy">
+                    Confirmar
+                </button>
+            </div>
         </div>
     </div>
 }
@@ -234,16 +349,45 @@
 @code {
     private readonly List<EmployeeViewModel> Employees = [];
     private readonly List<RoleOptionViewModel> Roles = [];
+    private static readonly HashSet<string> AllowedPhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png",
+        ".jpg",
+        ".jpeg"
+    };
     private CreateEmployeeViewModel CreateEmployeeModel { get; set; } = new();
+    private PendingEmployeePhotoUpload? PendingEmployeePhoto { get; set; }
     private Amazoff.Portal.Services.CurrentUserDto? CurrentUser { get; set; }
+    private EmployeeViewModel? EmployeePendingDeletion { get; set; }
+    private EmployeeViewModel? EmployeePendingActivation { get; set; }
+    private int? EditingEmployeeId { get; set; }
     private string? StatusMessage { get; set; }
+    private string? PasswordValidationMessage { get; set; }
     private bool HasError { get; set; }
     private bool IsBusy { get; set; }
     private bool IsLoading { get; set; } = true;
     private bool IsCreateModalOpen { get; set; }
+    private bool IsDeleteModalOpen { get; set; }
+    private bool IsActivateModalOpen { get; set; }
     private bool IsRoleDropdownOpen { get; set; }
+    private bool RemoveEmployeePhoto { get; set; }
     private bool CanCreateEmployee => CurrentUser?.RoleId is 1 or 2;
+    private bool IsEditingEmployee => EditingEmployeeId.HasValue;
+    private string EmployeeModalTitle => IsEditingEmployee ? "Alterar colaborador" : "Criar colaborador";
+    private string EmployeeModalSubmitLabel => "Guardar";
+    private string PasswordInputType => IsPasswordVisible ? "text" : "password";
+    private bool HasEmployeePhoto => PendingEmployeePhoto is not null || (!RemoveEmployeePhoto && !string.IsNullOrWhiteSpace(CreateEmployeeModel.ImagePath));
+    private string? CurrentEmployeePhotoPreview =>
+        PendingEmployeePhoto?.PreviewUrl
+        ?? (RemoveEmployeePhoto ? null : ResolveImageUrl(CreateEmployeeModel.ImagePath));
+    private string CreateEmployeeInitials =>
+        string.Concat((string.IsNullOrWhiteSpace(CreateEmployeeModel.FirstName) ? CreateEmployeeModel.Username : CreateEmployeeModel.FirstName)
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Take(2)
+            .Select(part => char.ToUpperInvariant(part[0])));
     private string SelectedRoleLabel { get; set; } = "Selecionar role";
+    private bool IsPasswordVisible { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -258,7 +402,7 @@
         StateHasChanged();
     }
 
-    private async Task LoadEmployeesAsync()
+    private async Task<bool> LoadEmployeesAsync(bool showErrorMessage = true)
     {
         IsLoading = true;
 
@@ -273,11 +417,18 @@
             {
                 Employees.AddRange(employees);
             }
+
+            return true;
         }
         catch (Exception)
         {
-            StatusMessage = "Nao foi possivel carregar os trabalhadores.";
-            HasError = true;
+            if (showErrorMessage)
+            {
+                StatusMessage = "Nao foi possivel carregar os trabalhadores.";
+                HasError = true;
+            }
+
+            return false;
         }
         finally
         {
@@ -317,18 +468,52 @@
 
             if (response.IsSuccessStatusCode)
             {
-                StatusMessage = "Trabalhador removido com sucesso.";
+                CloseDeleteModal();
+                await JS.InvokeVoidAsync("amazoffToast.success", "Colaborador desativado com sucesso.");
                 await LoadEmployeesAsync();
                 return;
             }
 
             var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
-            StatusMessage = apiMessage?.Message ?? "Nao foi possivel remover o trabalhador.";
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel desativar o trabalhador.";
             HasError = true;
         }
         catch (Exception)
         {
-            StatusMessage = "Nao foi possivel remover o trabalhador.";
+            StatusMessage = "Nao foi possivel desativar o trabalhador.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ActivateEmployeeAsync(EmployeeViewModel employee)
+    {
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            var response = await SendApiRequestAsync(client => client.PostAsync($"/employees/{employee.Id}/activate", content: null));
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseActivateModal();
+                await JS.InvokeVoidAsync("amazoffToast.success", "Colaborador incluído com sucesso.");
+                await LoadEmployeesAsync();
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel incluir o trabalhador.";
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel incluir o trabalhador.";
             HasError = true;
         }
         finally
@@ -343,13 +528,64 @@
         return await request(client);
     }
 
+    private string? ResolveImageUrl(string? imagePath)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(imagePath, UriKind.Absolute, out _))
+        {
+            return imagePath;
+        }
+
+        var client = HttpClientFactory.CreateClient("AmazoffApi");
+        var baseUrl = client.BaseAddress?.ToString().TrimEnd('/');
+
+        return string.IsNullOrWhiteSpace(baseUrl)
+            ? imagePath
+            : $"{baseUrl}/{imagePath.TrimStart('/')}";
+    }
+
     private void OpenCreateModal()
     {
+        EditingEmployeeId = null;
         CreateEmployeeModel = new CreateEmployeeViewModel
         {
-            IsActive = true
+            IsActive = true,
+            ImagePath = null
         };
+        PasswordValidationMessage = null;
+        IsPasswordVisible = false;
+        PendingEmployeePhoto = null;
+        RemoveEmployeePhoto = false;
         SelectedRoleLabel = "Selecionar role";
+        IsRoleDropdownOpen = false;
+        IsCreateModalOpen = true;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void OpenEditModal(EmployeeViewModel employee)
+    {
+        EditingEmployeeId = employee.Id;
+        CreateEmployeeModel = new CreateEmployeeViewModel
+        {
+            Username = employee.Username,
+            Email = employee.Email,
+            Password = string.Empty,
+            FirstName = employee.FirstName,
+            LastName = employee.LastName,
+            ImagePath = employee.ImagePath,
+            RoleId = employee.RoleId,
+            IsActive = employee.IsActive
+        };
+        PasswordValidationMessage = null;
+        IsPasswordVisible = false;
+        PendingEmployeePhoto = null;
+        RemoveEmployeePhoto = false;
+        SelectedRoleLabel = employee.RoleName ?? "Selecionar role";
         IsRoleDropdownOpen = false;
         IsCreateModalOpen = true;
         StatusMessage = null;
@@ -358,8 +594,61 @@
 
     private void CloseCreateModal()
     {
+        EditingEmployeeId = null;
+        PasswordValidationMessage = null;
+        IsPasswordVisible = false;
+        PendingEmployeePhoto = null;
+        RemoveEmployeePhoto = false;
         IsCreateModalOpen = false;
         IsRoleDropdownOpen = false;
+    }
+
+    private void OpenDeleteModal(EmployeeViewModel employee)
+    {
+        EmployeePendingDeletion = employee;
+        IsDeleteModalOpen = true;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseDeleteModal()
+    {
+        IsDeleteModalOpen = false;
+        EmployeePendingDeletion = null;
+    }
+
+    private void OpenActivateModal(EmployeeViewModel employee)
+    {
+        EmployeePendingActivation = employee;
+        IsActivateModalOpen = true;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseActivateModal()
+    {
+        IsActivateModalOpen = false;
+        EmployeePendingActivation = null;
+    }
+
+    private async Task ConfirmDeleteEmployeeAsync()
+    {
+        if (EmployeePendingDeletion is null)
+        {
+            return;
+        }
+
+        await DeleteEmployeeAsync(EmployeePendingDeletion);
+    }
+
+    private async Task ConfirmActivateEmployeeAsync()
+    {
+        if (EmployeePendingActivation is null)
+        {
+            return;
+        }
+
+        await ActivateEmployeeAsync(EmployeePendingActivation);
     }
 
     private void ToggleRoleDropdown()
@@ -374,36 +663,193 @@
         IsRoleDropdownOpen = false;
     }
 
-    private async Task CreateEmployeeAsync()
+    private void TogglePasswordVisibility()
     {
-        IsBusy = true;
+        IsPasswordVisible = !IsPasswordVisible;
+    }
+
+    private async Task UploadEmployeePhotoAsync(InputFileChangeEventArgs args)
+    {
+        if (!IsEditingEmployee || EditingEmployeeId is null)
+        {
+            return;
+        }
+
+        var file = args.File;
+
+        if (file is null)
+        {
+            return;
+        }
+
+        var extension = Path.GetExtension(file.Name);
+
+        if (!AllowedPhotoExtensions.Contains(extension))
+        {
+            StatusMessage = "Formato de imagem invalido. Usa PNG, JPG ou JPEG.";
+            HasError = true;
+            return;
+        }
+
         StatusMessage = null;
         HasError = false;
 
         try
         {
-            var response = await SendApiRequestAsync(client => client.PostAsJsonAsync("/employees", CreateEmployeeModel));
+            await using var stream = file.OpenReadStream(5_000_000);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            var content = memoryStream.ToArray();
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+
+            PendingEmployeePhoto = new PendingEmployeePhotoUpload(
+                file.Name,
+                contentType,
+                content,
+                $"data:{contentType};base64,{Convert.ToBase64String(content)}");
+            RemoveEmployeePhoto = false;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel preparar a foto do utilizador.";
+            HasError = true;
+        }
+    }
+
+    private async Task SaveEmployeeAsync()
+    {
+        var isEditing = IsEditingEmployee;
+        var shouldRemovePhoto = RemoveEmployeePhoto;
+        var pendingPhoto = PendingEmployeePhoto;
+
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+        PasswordValidationMessage = null;
+
+        if (string.IsNullOrWhiteSpace(CreateEmployeeModel.FirstName)
+            || string.IsNullOrWhiteSpace(CreateEmployeeModel.LastName)
+            || string.IsNullOrWhiteSpace(CreateEmployeeModel.Username)
+            || string.IsNullOrWhiteSpace(CreateEmployeeModel.Email)
+            || !new EmailAddressAttribute().IsValid(CreateEmployeeModel.Email)
+            || !CreateEmployeeModel.RoleId.HasValue)
+        {
+            StatusMessage = "Preenche todos os campos obrigatorios com dados validos.";
+            HasError = true;
+            IsBusy = false;
+            return;
+        }
+
+        if (!isEditing && string.IsNullOrWhiteSpace(CreateEmployeeModel.Password))
+        {
+            PasswordValidationMessage = "A password e obrigatoria.";
+            IsBusy = false;
+            return;
+        }
+
+        if (isEditing && shouldRemovePhoto)
+        {
+            CreateEmployeeModel.ImagePath = null;
+        }
+
+        try
+        {
+            var response = isEditing
+                ? await SendApiRequestAsync(client => client.PutAsJsonAsync($"/employees/{EditingEmployeeId}", CreateEmployeeModel))
+                : await SendApiRequestAsync(client => client.PostAsJsonAsync("/employees", CreateEmployeeModel));
 
             if (response.IsSuccessStatusCode)
             {
+                if (isEditing && EditingEmployeeId is not null && pendingPhoto is not null)
+                {
+                    var uploaded = await SavePendingEmployeePhotoAsync(EditingEmployeeId.Value, pendingPhoto);
+
+                    if (!uploaded)
+                    {
+                        return;
+                    }
+                }
+
                 CloseCreateModal();
-                StatusMessage = "Trabalhador criado com sucesso.";
-                await LoadEmployeesAsync();
+                StatusMessage = null;
+                await JS.InvokeVoidAsync(
+                    "amazoffToast.success",
+                    isEditing ? "Colaborador alterado com sucesso." : "Trabalhador criado com sucesso.");
+
+                var refreshed = await LoadEmployeesAsync(showErrorMessage: false);
+
+                if (!refreshed)
+                {
+                    StatusMessage = isEditing
+                        ? "Colaborador alterado com sucesso, mas nao foi possivel atualizar a lista."
+                        : "Trabalhador criado com sucesso, mas nao foi possivel atualizar a lista.";
+                    HasError = false;
+                }
+
                 return;
             }
 
             var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
-            StatusMessage = apiMessage?.Message ?? "Nao foi possivel criar o trabalhador.";
+            StatusMessage = apiMessage?.Message ?? (isEditing
+                ? "Nao foi possivel alterar o trabalhador."
+                : "Nao foi possivel criar o trabalhador.");
             HasError = true;
         }
         catch (Exception)
         {
-            StatusMessage = "Nao foi possivel criar o trabalhador.";
+            StatusMessage = isEditing
+                ? "Nao foi possivel alterar o trabalhador."
+                : "Nao foi possivel criar o trabalhador.";
             HasError = true;
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    private void RemoveEmployeePhotoSelection()
+    {
+        PendingEmployeePhoto = null;
+        RemoveEmployeePhoto = true;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private async Task<bool> SavePendingEmployeePhotoAsync(int employeeId, PendingEmployeePhotoUpload pendingPhoto)
+    {
+        try
+        {
+            using var formData = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(pendingPhoto.Content);
+            fileContent.Headers.ContentType = new(pendingPhoto.ContentType);
+            formData.Add(fileContent, "file", pendingPhoto.FileName);
+
+            var response = await SendApiRequestAsync(client => client.PostAsync($"/employees/{employeeId}/photo", formData));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+                StatusMessage = apiMessage?.Message ?? "Nao foi possivel guardar a foto do utilizador.";
+                HasError = true;
+                return false;
+            }
+
+            var uploadResult = await response.Content.ReadFromJsonAsync<EmployeePhotoUploadResponse>();
+
+            if (uploadResult is not null)
+            {
+                CreateEmployeeModel.ImagePath = uploadResult.ImagePath;
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel guardar a foto do utilizador.";
+            HasError = true;
+            return false;
         }
     }
 
@@ -456,8 +902,12 @@
         [Required(ErrorMessage = "A role é obrigatória.")]
         public int? RoleId { get; set; }
 
+        public string? ImagePath { get; set; }
+
         public bool IsActive { get; set; } = true;
     }
 
+    private sealed record PendingEmployeePhotoUpload(string FileName, string ContentType, byte[] Content, string PreviewUrl);
     private sealed record ApiMessageResponse(string Message);
+    private sealed record EmployeePhotoUploadResponse(string ImagePath);
 }
