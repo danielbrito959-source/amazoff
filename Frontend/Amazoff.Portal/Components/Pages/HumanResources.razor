@@ -66,7 +66,7 @@
                     <div class="dashboard-panel__heading">
                         <div>
                             <p class="dashboard-section-tag">Equipa atual</p>
-                            <h3>@Employees.Count trabalhador(es)</h3>
+                            <h3>@TableSummaryLabel</h3>
                         </div>
                     </div>
 
@@ -85,62 +85,209 @@
                                 <thead>
                                     <tr>
                                         <th>Avatar</th>
-                                        <th>Nome</th>
-                                        <th>Username</th>
-                                        <th>Email</th>
-                                        <th>Cargo</th>
+                                        <th>
+                                            <div class="hr-table-head">
+                                                <div class="hr-table-head__actions">
+                                                    <span class="hr-column-label">Nome</span>
+                                                    <div class="hr-column-icons">
+                                                        <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.Name)'>
+                                                            <span class="sr-only">Ordenar por nome</span>
+                                                            <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button type="button" class="hr-filter-button" @onclick='() => ToggleFilter(EmployeeFilterColumn.Name)'>
+                                                            <span class="sr-only">Filtrar por nome</span>
+                                                            <i class="fa-solid fa-magnifying-glass hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                @if (IsFilterOpen(EmployeeFilterColumn.Name))
+                                                {
+                                                    <div class="hr-filter-backdrop" @onclick="CloseFilterPopup"></div>
+                                                    <div class="hr-filter-popup">
+                                                        <input class="hr-filter-input"
+                                                               type="text"
+                                                               placeholder="Filtrar nome"
+                                                               @bind="NameFilter"
+                                                               @bind:event="oninput" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="hr-table-head">
+                                                <div class="hr-table-head__actions">
+                                                    <span class="hr-column-label">Username</span>
+                                                    <div class="hr-column-icons">
+                                                        <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.Username)'>
+                                                            <span class="sr-only">Ordenar por username</span>
+                                                            <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button type="button" class="hr-filter-button" @onclick='() => ToggleFilter(EmployeeFilterColumn.Username)'>
+                                                            <span class="sr-only">Filtrar por username</span>
+                                                            <i class="fa-solid fa-magnifying-glass hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                @if (IsFilterOpen(EmployeeFilterColumn.Username))
+                                                {
+                                                    <div class="hr-filter-backdrop" @onclick="CloseFilterPopup"></div>
+                                                    <div class="hr-filter-popup">
+                                                        <input class="hr-filter-input"
+                                                               type="text"
+                                                               placeholder="Filtrar username"
+                                                               @bind="UsernameFilter"
+                                                               @bind:event="oninput" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="hr-table-head">
+                                                <div class="hr-table-head__actions">
+                                                    <span class="hr-column-label">Email</span>
+                                                    <div class="hr-column-icons">
+                                                        <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.Email)'>
+                                                            <span class="sr-only">Ordenar por email</span>
+                                                            <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button type="button" class="hr-filter-button" @onclick='() => ToggleFilter(EmployeeFilterColumn.Email)'>
+                                                            <span class="sr-only">Filtrar por email</span>
+                                                            <i class="fa-solid fa-magnifying-glass hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                @if (IsFilterOpen(EmployeeFilterColumn.Email))
+                                                {
+                                                    <div class="hr-filter-backdrop" @onclick="CloseFilterPopup"></div>
+                                                    <div class="hr-filter-popup">
+                                                        <input class="hr-filter-input"
+                                                               type="text"
+                                                               placeholder="Filtrar email"
+                                                               @bind="EmailFilter"
+                                                               @bind:event="oninput" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </th>
+                                        <th>
+                                            <div class="hr-table-head">
+                                                <div class="hr-table-head__actions">
+                                                    <span class="hr-column-label">Cargo</span>
+                                                    <div class="hr-column-icons">
+                                                        <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.Role)'>
+                                                            <span class="sr-only">Ordenar por cargo</span>
+                                                            <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button type="button" class="hr-filter-button" @onclick='() => ToggleFilter(EmployeeFilterColumn.Role)'>
+                                                            <span class="sr-only">Filtrar por cargo</span>
+                                                            <i class="fa-solid fa-magnifying-glass hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                @if (IsFilterOpen(EmployeeFilterColumn.Role))
+                                                {
+                                                    <div class="hr-filter-backdrop" @onclick="CloseFilterPopup"></div>
+                                                    <div class="hr-filter-popup">
+                                                        <input class="hr-filter-input"
+                                                               type="text"
+                                                               placeholder="Filtrar cargo"
+                                                               @bind="RoleFilter"
+                                                               @bind:event="oninput" />
+                                                    </div>
+                                                }
+                                            </div>
+                                        </th>
                                         @if (CanCreateEmployee)
                                         {
-                                            <th>Ativo</th>
+                                            <th>
+                                                <div class="hr-table-head">
+                                                    <div class="hr-table-head__actions">
+                                                        <button type="button" class="hr-filter-toggle hr-filter-toggle--static" disabled>
+                                                            <span class="hr-column-label">Ativo</span>
+                                                        </button>
+                                                        <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.Active)'>
+                                                            <span class="sr-only">Ordenar por ativo</span>
+                                                            <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </th>
                                         }
-                                        <th>Ultimo login</th>
+                                        <th>
+                                            <div class="hr-table-head">
+                                                <div class="hr-table-head__actions">
+                                                    <button type="button" class="hr-filter-toggle hr-filter-toggle--static" disabled>
+                                                        <span class="hr-column-label">Ultimo login</span>
+                                                    </button>
+                                                    <button type="button" class="hr-sort-button" @onclick='() => ToggleSort(EmployeeSortColumn.LastLogin)'>
+                                                        <span class="sr-only">Ordenar por ultimo login</span>
+                                                        <i class="fa-solid fa-arrow-down-z-a hr-sort-button__icon" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </th>
                                         <th></th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach (var employee in Employees)
+                                    @if (FilteredAndSortedEmployees.Count == 0)
                                     {
                                         <tr>
-                                            <td>
-                                                @if (!string.IsNullOrWhiteSpace(employee.ImagePath))
-                                                {
-                                                    <img src="@ResolveImageUrl(employee.ImagePath)"
-                                                         alt="@employee.FullName"
-                                                         class="hr-avatar-image" />
-                                                }
-                                                else
-                                                {
-                                                    <div class="hr-avatar-fallback">@employee.Initials</div>
-                                                }
+                                            <td colspan="@TableColumnCount" class="hr-table-empty">
+                                                Nenhum colaborador encontrado para esse filtro.
                                             </td>
-                                            <td>@employee.FullName</td>
-                                            <td>@employee.Username</td>
-                                            <td>@employee.Email</td>
-                                            <td>@(employee.RoleName ?? "-")</td>
-                                            @if (CanCreateEmployee)
-                                            {
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var employee in FilteredAndSortedEmployees)
+                                        {
+                                            <tr>
                                                 <td>
-                                                    <span class="hr-badge @(employee.IsActive ? null : "hr-badge--inactive")">
-                                                        @(employee.IsActive ? "Ativo" : "Inativo")
-                                                    </span>
-                                                </td>
-                                            }
-                                            <td>@(employee.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
-                                            <td class="hr-table-actions">
-                                                @if (CanCreateEmployee)
-                                                {
-                                                    <button type="button" class="hr-table-button hr-table-button--warning" @onclick="() => OpenEditModal(employee)">Alterar</button>
-                                                    @if (employee.IsActive)
+                                                    @if (!string.IsNullOrWhiteSpace(employee.ImagePath))
                                                     {
-                                                        <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => OpenDeleteModal(employee)">Remover</button>
+                                                        <img src="@ResolveImageUrl(employee.ImagePath)"
+                                                             alt="@employee.FullName"
+                                                             class="hr-avatar-image" />
                                                     }
                                                     else
                                                     {
-                                                        <button type="button" class="hr-table-button hr-table-button--success" @onclick="() => OpenActivateModal(employee)">Incluir</button>
+                                                        <div class="hr-avatar-fallback">@employee.Initials</div>
                                                     }
+                                                </td>
+                                                <td>@employee.FullName</td>
+                                                <td>@employee.Username</td>
+                                                <td>@employee.Email</td>
+                                                <td>@(employee.RoleName ?? "-")</td>
+                                                @if (CanCreateEmployee)
+                                                {
+                                                    <td>
+                                                        <span class="hr-badge @(employee.IsActive ? null : "hr-badge--inactive")">
+                                                            @(employee.IsActive ? "Ativo" : "Inativo")
+                                                        </span>
+                                                    </td>
                                                 }
-                                            </td>
-                                        </tr>
+                                                <td>@(employee.LastLoginAt?.ToString("dd/MM/yyyy HH:mm") ?? "Nunca")</td>
+                                                <td class="hr-table-actions">
+                                                    @if (CanEditEmployee(employee))
+                                                    {
+                                                        <button type="button" class="hr-table-button hr-table-button--warning" @onclick="() => OpenEditModal(employee)">Alterar</button>
+                                                    }
+
+                                                    @if (CanCreateEmployee)
+                                                    {
+                                                        @if (employee.IsActive)
+                                                        {
+                                                            <button type="button" class="hr-table-button hr-table-button--danger" @onclick="() => OpenDeleteModal(employee)">Remover</button>
+                                                        }
+                                                        else
+                                                        {
+                                                            <button type="button" class="hr-table-button hr-table-button--success" @onclick="() => OpenActivateModal(employee)">Incluir</button>
+                                                        }
+                                                    }
+                                                </td>
+                                            </tr>
+                                        }
                                     }
                                 </tbody>
                             </table>
@@ -388,6 +535,24 @@
             .Select(part => char.ToUpperInvariant(part[0])));
     private string SelectedRoleLabel { get; set; } = "Selecionar role";
     private bool IsPasswordVisible { get; set; }
+    private EmployeeSortColumn CurrentSortColumn { get; set; } = EmployeeSortColumn.Name;
+    private bool IsSortAscending { get; set; } = true;
+    private string NameFilter { get; set; } = string.Empty;
+    private string UsernameFilter { get; set; } = string.Empty;
+    private string EmailFilter { get; set; } = string.Empty;
+    private string RoleFilter { get; set; } = string.Empty;
+    private EmployeeFilterColumn? OpenFilterColumn { get; set; }
+    private List<EmployeeViewModel> FilteredAndSortedEmployees => GetFilteredAndSortedEmployees().ToList();
+    private int TableColumnCount => CanCreateEmployee ? 8 : 7;
+    private bool HasActiveFilters =>
+        !string.IsNullOrWhiteSpace(NameFilter)
+        || !string.IsNullOrWhiteSpace(UsernameFilter)
+        || !string.IsNullOrWhiteSpace(EmailFilter)
+        || !string.IsNullOrWhiteSpace(RoleFilter);
+    private string TableSummaryLabel =>
+        HasActiveFilters
+            ? $"{FilteredAndSortedEmployees.Count} de {Employees.Count} trabalhador(es)"
+            : $"{Employees.Count} trabalhador(es)";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -434,6 +599,71 @@
         {
             IsLoading = false;
         }
+    }
+
+    private IEnumerable<EmployeeViewModel> GetFilteredAndSortedEmployees()
+    {
+        var filteredEmployees = Employees.Where(employee =>
+            MatchesFilter(employee.FullName, NameFilter)
+            && MatchesFilter(employee.Username, UsernameFilter)
+            && MatchesFilter(employee.Email, EmailFilter)
+            && MatchesFilter(employee.RoleName, RoleFilter));
+
+        Func<EmployeeViewModel, object?> keySelector = CurrentSortColumn switch
+        {
+            EmployeeSortColumn.Username => employee => employee.Username,
+            EmployeeSortColumn.Email => employee => employee.Email,
+            EmployeeSortColumn.Role => employee => employee.RoleName ?? string.Empty,
+            EmployeeSortColumn.Active => employee => employee.IsActive,
+            EmployeeSortColumn.LastLogin => employee => employee.LastLoginAt ?? DateTime.MinValue,
+            _ => employee => employee.FullName
+        };
+
+        return IsSortAscending
+            ? filteredEmployees.OrderBy(keySelector)
+            : filteredEmployees.OrderByDescending(keySelector);
+    }
+
+    private static bool MatchesFilter(string? value, string filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            return true;
+        }
+
+        return (value ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ToggleSort(EmployeeSortColumn column)
+    {
+        if (CurrentSortColumn == column)
+        {
+            IsSortAscending = !IsSortAscending;
+            return;
+        }
+
+        CurrentSortColumn = column;
+        IsSortAscending = true;
+    }
+
+    private void ToggleFilter(EmployeeFilterColumn column)
+    {
+        OpenFilterColumn = OpenFilterColumn == column ? null : column;
+    }
+
+    private bool IsFilterOpen(EmployeeFilterColumn column)
+    {
+        return OpenFilterColumn == column;
+    }
+
+    private void CloseFilterPopup()
+    {
+        OpenFilterColumn = null;
+    }
+
+    private bool CanEditEmployee(EmployeeViewModel employee)
+    {
+        return CanCreateEmployee || CurrentUser?.Id == employee.Id;
     }
 
     private async Task LoadRolesAsync()
@@ -910,4 +1140,21 @@
     private sealed record PendingEmployeePhotoUpload(string FileName, string ContentType, byte[] Content, string PreviewUrl);
     private sealed record ApiMessageResponse(string Message);
     private sealed record EmployeePhotoUploadResponse(string ImagePath);
+    private enum EmployeeSortColumn
+    {
+        Name,
+        Username,
+        Email,
+        Role,
+        Active,
+        LastLogin
+    }
+
+    private enum EmployeeFilterColumn
+    {
+        Name,
+        Username,
+        Email,
+        Role
+    }
 }

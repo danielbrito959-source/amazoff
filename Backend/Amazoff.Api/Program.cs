@@ -1,4 +1,6 @@
 using Amazoff.Api.Data;
+using Amazoff.Api.Features.Auth;
+using Amazoff.Api.Options;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
 
@@ -10,6 +12,11 @@ builder.Logging.AddDebug();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.Configure<BrevoOptions>(builder.Configuration.GetSection(BrevoOptions.SectionName));
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com/");
+});
 builder.Services.AddDbContext<AmazoffDbContext>((serviceProvider, options) =>
 {
     var configuration = serviceProvider.GetRequiredService<IConfiguration>();

@@ -46,24 +46,64 @@
                                            class="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none transition placeholder:text-slate-500 focus:border-[#5aadf4] focus:ring-4 focus:ring-[#5aadf4]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" />
                             </div>
                         }
-                        else
+                        else if (CurrentStep == LoginStep.RecoveryEmail)
                         {
-                            <div>
-                                <label for="password" class="sr-only">Password</label>
-                                <InputText id="password"
-                                           @bind-Value="LoginModel.Password"
-                                           type="password"
-                                           autocomplete="current-password"
-                                           placeholder="Password"
-                                           disabled="@IsLoading"
-                                           class="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none transition placeholder:text-slate-500 focus:border-[#5aadf4] focus:ring-4 focus:ring-[#5aadf4]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" />
+                            <div class="space-y-2">
+                                <div>
+                                    <label for="recovery-email" class="sr-only">Email</label>
+                                    <InputText id="recovery-email"
+                                               @bind-Value="LoginModel.RecoveryEmail"
+                                               autocomplete="email"
+                                               placeholder="Email"
+                                               disabled="@IsLoading"
+                                               class="h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none transition placeholder:text-slate-500 focus:border-[#5aadf4] focus:ring-4 focus:ring-[#5aadf4]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" />
+                                </div>
 
                                 <button type="button"
-                                        @onclick="BackToUsername"
+                                        @onclick="BackToPassword"
                                         disabled="@IsLoading"
-                                        class="mt-[5px] pl-[5px] text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
-                                    Alterar utilizador
+                                        class="pl-[5px] text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
+                                    Voltar ao login
                                 </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="space-y-2">
+                                <label for="password" class="sr-only">Password</label>
+                                <div class="hr-password-field">
+                                    <InputText id="password"
+                                               @bind-Value="LoginModel.Password"
+                                               type="@PasswordInputType"
+                                               autocomplete="current-password"
+                                               placeholder="Password"
+                                               disabled="@IsLoading"
+                                               class="hr-password-field__input h-11 w-full rounded border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 outline-none transition placeholder:text-slate-500 focus:border-[#5aadf4] focus:ring-4 focus:ring-[#5aadf4]/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400" />
+
+                                    <button type="button"
+                                            class="hr-password-field__toggle"
+                                            @onclick="TogglePasswordVisibility"
+                                            aria-label="Mostrar ou esconder password"
+                                            disabled="@IsLoading">
+                                        <i class="fa-solid @(IsPasswordVisible ? "fa-eye-slash" : "fa-eye")" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center justify-between gap-3">
+                                    <button type="button"
+                                            @onclick="BackToUsername"
+                                            disabled="@IsLoading"
+                                            class="pl-[5px] text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
+                                        Alterar utilizador
+                                    </button>
+
+                                    <button type="button"
+                                            @onclick="OpenPasswordRecovery"
+                                            disabled="@IsLoading"
+                                            class="text-sm font-semibold text-[#5aadf4] transition hover:text-[#439ce6] disabled:cursor-not-allowed disabled:text-slate-300">
+                                        Recuperar password
+                                    </button>
+                                </div>
                             </div>
                         }
 
@@ -94,16 +134,30 @@
     private string? StatusMessage { get; set; }
     private bool IsError { get; set; }
     private bool IsLoading { get; set; }
+    private bool IsPasswordVisible { get; set; }
 
     private string ButtonText => IsLoading
-        ? "A verificar..."
-        : CurrentStep == LoginStep.Username ? "Seguinte" : "Entrar";
+        ? CurrentStep == LoginStep.RecoveryEmail ? "A enviar..." : "A verificar..."
+        : CurrentStep switch
+        {
+            LoginStep.Username => "Seguinte",
+            LoginStep.RecoveryEmail => "Enviar",
+            _ => "Entrar"
+        };
+
+    private string PasswordInputType => IsPasswordVisible ? "text" : "password";
 
     private string StatusClass =>
         $"mt-6 rounded border px-4 py-3 text-sm font-medium {(IsError ? "border-red-200 bg-red-50 text-red-600" : "border-[#5aadf4]/25 bg-[#5aadf4]/10 text-slate-600")}";
 
     private async Task HandleLoginAsync()
     {
+        if (CurrentStep == LoginStep.RecoveryEmail)
+        {
+            await HandlePasswordRecoveryAsync();
+            return;
+        }
+
         if (CurrentStep == LoginStep.Password && string.IsNullOrWhiteSpace(LoginModel.Password))
         {
             StatusMessage = "Indica a password.";
@@ -150,6 +204,7 @@
 
                 CurrentStep = LoginStep.Password;
                 LoginModel.Password = null;
+                IsPasswordVisible = false;
                 return;
             }
 
@@ -183,6 +238,57 @@
         }
     }
 
+    private async Task HandlePasswordRecoveryAsync()
+    {
+        if (string.IsNullOrWhiteSpace(LoginModel.RecoveryEmail))
+        {
+            StatusMessage = "Indica o email.";
+            IsError = true;
+            return;
+        }
+
+        IsLoading = true;
+        StatusMessage = null;
+        IsError = false;
+
+        try
+        {
+            var httpClient = HttpClientFactory.CreateClient("AmazoffApi");
+            var response = await httpClient.PostAsJsonAsync(
+                "/auth/recover-password",
+                new PasswordRecoveryLookupRequest(LoginModel.RecoveryEmail.Trim()));
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordRecoveryLookupResponse>();
+                StatusMessage = result?.Message ?? "Consulte o seu email para recuperar a passowrd.";
+                IsError = false;
+                return;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                StatusMessage = "Nao existe utilizador com esse email.";
+            }
+            else
+            {
+                var result = await response.Content.ReadFromJsonAsync<PasswordRecoveryLookupResponse>();
+                StatusMessage = result?.Message ?? "Nao foi possivel validar o email.";
+            }
+
+            IsError = true;
+        }
+        catch (HttpRequestException)
+        {
+            StatusMessage = "Nao foi possivel ligar a API. Confirma que a API esta a correr.";
+            IsError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     private async Task<HttpResponseMessage> TryValidateUserAsync(string username)
     {
         var httpClient = HttpClientFactory.CreateClient("AmazoffApi");
@@ -196,23 +302,50 @@
     {
         CurrentStep = LoginStep.Username;
         LoginModel.Password = null;
+        LoginModel.RecoveryEmail = null;
+        IsPasswordVisible = false;
         StatusMessage = null;
         IsError = false;
+    }
+
+    private void BackToPassword()
+    {
+        CurrentStep = LoginStep.Password;
+        LoginModel.RecoveryEmail = null;
+        StatusMessage = null;
+        IsError = false;
+    }
+
+    private void OpenPasswordRecovery()
+    {
+        CurrentStep = LoginStep.RecoveryEmail;
+        LoginModel.RecoveryEmail = null;
+        StatusMessage = null;
+        IsError = false;
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        IsPasswordVisible = !IsPasswordVisible;
     }
 
     private enum LoginStep
     {
         Username,
-        Password
+        Password,
+        RecoveryEmail
     }
 
     private sealed class PortalLogin
     {
         public string? Username { get; set; }
         public string? Password { get; set; }
+        public string? RecoveryEmail { get; set; }
     }
 
     private sealed record LoginRequest(string Username, string? Password);
+    private sealed record PasswordRecoveryLookupRequest(string Email);
+    private sealed record PasswordRecoveryLookupResponse(bool Success, string Message);
 
     private sealed record LoginResponse(bool Success, string Message, LoginUserResponse? User);
 
