@@ -45,7 +45,16 @@ public sealed class BrevoEmailService(
             "application/json");
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+        var errorMessage = ExtractBrevoErrorMessage(responseContent)
+            ?? "Não foi possível enviar o email de recuperação.";
+
+        throw new EmailDeliveryException(errorMessage);
     }
 
     private void ValidateConfiguration()
@@ -68,5 +77,28 @@ public sealed class BrevoEmailService(
             "Por favor entre em contacto com a administracao para concluir a recuperacao da password." +
             $"{Environment.NewLine}{Environment.NewLine}" +
             "Amazoff";
+    }
+
+    private static string? ExtractBrevoErrorMessage(string responseContent)
+    {
+        if (string.IsNullOrWhiteSpace(responseContent))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(responseContent);
+
+            if (document.RootElement.TryGetProperty("message", out var messageElement))
+            {
+                return messageElement.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return responseContent;
     }
 }

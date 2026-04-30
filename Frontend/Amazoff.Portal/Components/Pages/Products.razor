@@ -1,0 +1,421 @@
+@page "/produtos"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JS
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+
+<PageTitle>Produtos</PageTitle>
+
+<section class="dashboard-shell">
+    <div class="dashboard-window">
+        <aside class="dashboard-sidebar">
+            <div class="dashboard-brand">
+                <img src="/images/LogoShort_Amazoff.png" alt="Amazoff" class="dashboard-brand__logo" />
+            </div>
+
+            <div class="dashboard-nav-group">
+                <NavLink class="dashboard-nav-item" href="/dashboard">
+                    <span>Dashboard</span>
+                </NavLink>
+                <NavLink class="dashboard-nav-item" href="/produtos" Match="NavLinkMatch.All">
+                    <span>Produtos</span>
+                </NavLink>
+            </div>
+
+            <div class="dashboard-nav-group">
+                <div class="dashboard-nav-item">
+                    <span>Encomendas</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Clientes</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Relatorios</span>
+                </div>
+                <div class="dashboard-nav-item">
+                    <span>Marketing</span>
+                </div>
+                <NavLink class="dashboard-nav-item" href="/recursos-humanos">
+                    <span>Recursos Humanos</span>
+                </NavLink>
+                <LogoutMenuButton />
+            </div>
+        </aside>
+
+        <div class="dashboard-content">
+            <header class="dashboard-topbar">
+                <div class="dashboard-topbar__left hr-topbar-actions">
+                    <button type="button" class="hr-primary-button" @onclick="OpenCreateModal">
+                        Adicionar categoria
+                    </button>
+                </div>
+
+                <div class="dashboard-topbar__right">
+                    <CurrentUserProfile />
+                </div>
+            </header>
+
+            <main class="dashboard-grid hr-grid">
+                <section class="dashboard-panel hr-table-panel">
+                    <div class="dashboard-panel__heading">
+                        <div>
+                            <p class="dashboard-section-tag">Categorias</p>
+                            <h3>@Categories.Count categoria(s)</h3>
+                        </div>
+                    </div>
+
+                    @if (HasError && !string.IsNullOrWhiteSpace(StatusMessage))
+                    {
+                        <div class="hr-feedback hr-feedback--error">@StatusMessage</div>
+                    }
+
+                    @if (IsLoading)
+                    {
+                        <p class="dashboard-copy">A carregar categorias...</p>
+                    }
+                    else if (Categories.Count == 0)
+                    {
+                        <p class="dashboard-copy">Nao ha categorias disponiveis.</p>
+                    }
+                    else
+                    {
+                        <div class="categories-grid">
+                            @foreach (var category in Categories)
+                            {
+                                <article class="category-card">
+                                    <div class="category-card__body">
+                                        <div class="category-card__topline">
+                                            <p class="category-card__label">Categoria</p>
+
+                                            <div class="category-card__menu-wrap">
+                                                <button type="button"
+                                                        class="category-card__menu-button"
+                                                        @onclick='() => ToggleCategoryMenu(category.Id)'>
+                                                    <span class="sr-only">Abrir ações da categoria</span>
+                                                    <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                                                </button>
+
+                                                @if (OpenCategoryMenuId == category.Id)
+                                                {
+                                                    <div class="hr-filter-backdrop" @onclick="CloseCategoryMenu"></div>
+                                                    <div class="category-card__menu">
+                                                        <button type="button"
+                                                                class="category-card__menu-item"
+                                                                @onclick='() => OpenEditModal(category)'>
+                                                            Editar
+                                                        </button>
+                                                        <button type="button"
+                                                                class="category-card__menu-item category-card__menu-item--danger"
+                                                                @onclick='() => OpenDeleteModal(category)'>
+                                                            Eliminar
+                                                        </button>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        <div class="category-card__headline">
+                                            <h4 class="category-card__title">@category.Name</h4>
+                                            <span class="hr-badge @(category.IsActive ? null : "hr-badge--inactive")">
+                                                @(category.IsActive ? "Ativo" : "Inativo")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </article>
+                            }
+                        </div>
+                    }
+                </section>
+            </main>
+        </div>
+    </div>
+</section>
+
+@if (IsCreateModalOpen)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseCreateModal">
+        <div class="hr-modal hr-modal--compact" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <h3>@(EditingCategoryId.HasValue ? "Editar categoria" : "Adicionar categoria")</h3>
+                <button type="button" class="hr-modal__close" @onclick="CloseCreateModal">x</button>
+            </div>
+
+            <EditForm Model="CreateCategoryModel" OnValidSubmit="SaveCategoryAsync">
+                <DataAnnotationsValidator />
+
+                <div class="hr-modal__grid">
+                    <div class="hr-field hr-field--full">
+                        <label for="category-name">Nome*</label>
+                        <InputText id="category-name" @bind-Value="CreateCategoryModel.Name" />
+                        <ValidationMessage For="() => CreateCategoryModel.Name" />
+                    </div>
+
+                    <div class="hr-field hr-field--full hr-switch-field">
+                        <label for="category-active">Categoria ativa</label>
+                        <label class="hr-switch" for="category-active">
+                            <InputCheckbox id="category-active" @bind-Value="CreateCategoryModel.IsActive" class="hr-switch__input" />
+                            <span class="hr-switch__track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hr-modal__actions">
+                    <button type="button" class="hr-secondary-button" @onclick="CloseCreateModal">Cancelar</button>
+                    <button type="submit" class="hr-primary-button" disabled="@IsBusy">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (IsDeleteModalOpen && CategoryPendingDeletion is not null)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseDeleteModal">
+        <div class="hr-modal hr-modal--confirm" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <h3>Eliminar categoria</h3>
+                <button type="button" class="hr-modal__close" @onclick="CloseDeleteModal">x</button>
+            </div>
+
+            <p class="hr-confirm-employee">Tem a certeza que deseja eliminar a categoria <strong>@CategoryPendingDeletion.Name</strong>?</p>
+
+            <div class="hr-modal__actions">
+                <button type="button" class="hr-secondary-button" @onclick="CloseDeleteModal">Cancelar</button>
+                <button type="button" class="hr-secondary-button hr-secondary-button--danger" @onclick="ConfirmDeleteCategoryAsync" disabled="@IsBusy">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<CategoryViewModel> Categories = [];
+    private CreateCategoryViewModel CreateCategoryModel { get; set; } = new();
+    private CategoryViewModel? CategoryPendingDeletion { get; set; }
+    private int? EditingCategoryId { get; set; }
+    private int? OpenCategoryMenuId { get; set; }
+    private bool IsCreateModalOpen { get; set; }
+    private bool IsDeleteModalOpen { get; set; }
+    private bool IsBusy { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool HasError { get; set; }
+    private string? StatusMessage { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await LoadCategoriesAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadCategoriesAsync()
+    {
+        IsLoading = true;
+
+        try
+        {
+            var categories = await SendApiRequestAsync(async client =>
+                await client.GetFromJsonAsync<List<CategoryViewModel>>("/categories"));
+
+            Categories.Clear();
+
+            if (categories is not null)
+            {
+                Categories.AddRange(categories);
+            }
+
+            StatusMessage = null;
+            HasError = false;
+        }
+        catch (Exception)
+        {
+            Categories.Clear();
+            StatusMessage = "Nao foi possivel carregar as categorias.";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        EditingCategoryId = null;
+        CreateCategoryModel = new CreateCategoryViewModel
+        {
+            IsActive = true
+        };
+        IsCreateModalOpen = true;
+        OpenCategoryMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void OpenEditModal(CategoryViewModel category)
+    {
+        EditingCategoryId = category.Id;
+        CreateCategoryModel = new CreateCategoryViewModel
+        {
+            Name = category.Name,
+            IsActive = category.IsActive
+        };
+        IsCreateModalOpen = true;
+        OpenCategoryMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseCreateModal()
+    {
+        IsCreateModalOpen = false;
+        EditingCategoryId = null;
+    }
+
+    private void OpenDeleteModal(CategoryViewModel category)
+    {
+        CategoryPendingDeletion = category;
+        IsDeleteModalOpen = true;
+        OpenCategoryMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseDeleteModal()
+    {
+        IsDeleteModalOpen = false;
+        CategoryPendingDeletion = null;
+    }
+
+    private void ToggleCategoryMenu(int categoryId)
+    {
+        OpenCategoryMenuId = OpenCategoryMenuId == categoryId ? null : categoryId;
+    }
+
+    private void CloseCategoryMenu()
+    {
+        OpenCategoryMenuId = null;
+    }
+
+    private async Task SaveCategoryAsync()
+    {
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        if (string.IsNullOrWhiteSpace(CreateCategoryModel.Name))
+        {
+            StatusMessage = "O nome da categoria é obrigatório.";
+            HasError = true;
+            IsBusy = false;
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+            var isEditing = EditingCategoryId.HasValue;
+
+            if (isEditing)
+            {
+                response = await SendApiRequestAsync(client => client.PutAsJsonAsync($"/categories/{EditingCategoryId}", CreateCategoryModel));
+            }
+            else
+            {
+                response = await SendApiRequestAsync(client => client.PostAsJsonAsync("/categories", CreateCategoryModel));
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseCreateModal();
+                await LoadCategoriesAsync();
+                await JS.InvokeVoidAsync(
+                    "amazoffToast.success",
+                    isEditing ? "Categoria alterada com sucesso." : "Categoria adicionada com sucesso.");
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? (isEditing
+                ? "Nao foi possivel alterar a categoria."
+                : "Nao foi possivel adicionar a categoria.");
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = EditingCategoryId.HasValue
+                ? "Nao foi possivel alterar a categoria."
+                : "Nao foi possivel adicionar a categoria.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ConfirmDeleteCategoryAsync()
+    {
+        if (CategoryPendingDeletion is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            var response = await SendApiRequestAsync(client => client.DeleteAsync($"/categories/{CategoryPendingDeletion.Id}"));
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseDeleteModal();
+                await LoadCategoriesAsync();
+                await JS.InvokeVoidAsync("amazoffToast.success", "Categoria eliminada com sucesso.");
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel eliminar a categoria.";
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel eliminar a categoria.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task<T> SendApiRequestAsync<T>(Func<HttpClient, Task<T>> request)
+    {
+        var client = HttpClientFactory.CreateClient("AmazoffApi");
+        return await request(client);
+    }
+
+    private sealed class CategoryViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+
+    private sealed class CreateCategoryViewModel
+    {
+        [Required(ErrorMessage = "O nome é obrigatório.")]
+        public string Name { get; set; } = string.Empty;
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    private sealed record ApiMessageResponse(string Message);
+}

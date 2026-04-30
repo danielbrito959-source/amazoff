@@ -99,11 +99,17 @@ public sealed class AuthController(AmazoffDbContext dbContext, IEmailService ema
                 StatusCodes.Status503ServiceUnavailable,
                 new PasswordRecoveryLookupResponse(false, "O servico Brevo nao esta configurado."));
         }
+        catch (EmailDeliveryException exception)
+        {
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                new PasswordRecoveryLookupResponse(false, exception.Message));
+        }
         catch (HttpRequestException)
         {
             return StatusCode(
                 StatusCodes.Status502BadGateway,
-                new PasswordRecoveryLookupResponse(false, "Nao foi possivel enviar o email de recuperacao."));
+                new PasswordRecoveryLookupResponse(false, "Não foi possível comunicar com a Brevo."));
         }
 
         return Ok(new PasswordRecoveryLookupResponse(true, "Consulte o seu email para recuperar a passowrd."));

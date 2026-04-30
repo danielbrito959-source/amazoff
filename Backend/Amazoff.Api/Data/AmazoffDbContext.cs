@@ -5,6 +5,8 @@ namespace Amazoff.Api.Data;
 
 public sealed class AmazoffDbContext(DbContextOptions<AmazoffDbContext> options) : DbContext(options)
 {
+    public DbSet<Category> Categories => Set<Category>();
+
     public DbSet<Role> Roles => Set<Role>();
 
     public DbSet<User> Users => Set<User>();
@@ -25,6 +27,36 @@ public sealed class AmazoffDbContext(DbContextOptions<AmazoffDbContext> options)
                 .HasColumnName("role")
                 .HasMaxLength(80)
                 .HasDefaultValue("user");
+        });
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.ToTable("categorias");
+
+            entity.HasKey(category => category.Id);
+
+            entity.Property(category => category.Id)
+                .HasColumnName("id")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(category => category.Name)
+                .HasColumnName("nome")
+                .HasMaxLength(255);
+
+            entity.Property(category => category.IsActive)
+                .HasColumnName("is_active")
+                .HasDefaultValue(true);
+
+            entity.Property(category => category.DateCreated)
+                .HasColumnName("date_created")
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(category => category.DateChanged)
+                .HasColumnName("date_changed")
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAddOrUpdate();
         });
 
         modelBuilder.Entity<User>(entity =>

@@ -22,8 +22,10 @@ public static class DatabaseSchemaBootstrapper
         {
             var databaseName = connection.Database;
 
+            await EnsureCategoriesTableAsync(connection, cancellationToken);
             await EnsureAutoIncrementAsync(connection, databaseName, "users", "id", cancellationToken);
             await EnsureAutoIncrementAsync(connection, databaseName, "roles", "id", cancellationToken);
+            await EnsureAutoIncrementAsync(connection, databaseName, "categorias", "id", cancellationToken);
         }
         finally
         {
@@ -78,6 +80,26 @@ public static class DatabaseSchemaBootstrapper
              """;
 
         await alterCommand.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task EnsureCategoriesTableAsync(
+        DbConnection connection,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            CREATE TABLE IF NOT EXISTS `categorias` (
+                `id` INT(11) NOT NULL AUTO_INCREMENT,
+                `nome` VARCHAR(255) NOT NULL,
+                `is_active` BIT(1) NOT NULL DEFAULT b'1',
+                `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                `date_changed` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            );
+            """;
+
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private static void AddParameter(DbCommand command, string name, object value)
