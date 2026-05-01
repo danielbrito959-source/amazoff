@@ -6,6 +6,7 @@ namespace Amazoff.Api.Data;
 public sealed class AmazoffDbContext(DbContextOptions<AmazoffDbContext> options) : DbContext(options)
 {
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Model> Models => Set<Model>();
 
     public DbSet<Role> Roles => Set<Role>();
 
@@ -57,6 +58,48 @@ public sealed class AmazoffDbContext(DbContextOptions<AmazoffDbContext> options)
                 .HasColumnType("datetime")
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAddOrUpdate();
+        });
+
+        modelBuilder.Entity<Model>(entity =>
+        {
+            entity.ToTable("modelos");
+
+            entity.HasKey(model => model.Id);
+
+            entity.Property(model => model.Id)
+                .HasColumnName("id")
+                .ValueGeneratedOnAdd();
+
+            entity.Property(model => model.Name)
+                .HasColumnName("nome")
+                .HasMaxLength(255);
+
+            entity.Property(model => model.CategoryId)
+                .HasColumnName("id_categoria");
+
+            entity.Property(model => model.ImagePath)
+                .HasColumnName("image_path")
+                .HasMaxLength(500);
+
+            entity.Property(model => model.IsActive)
+                .HasColumnName("is_active")
+                .HasDefaultValue(true);
+
+            entity.Property(model => model.DateCreated)
+                .HasColumnName("date_created")
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(model => model.DateChanged)
+                .HasColumnName("date_changed")
+                .HasColumnType("datetime")
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .ValueGeneratedOnAddOrUpdate();
+
+            entity.HasOne(model => model.Category)
+                .WithMany(category => category.Models)
+                .HasForeignKey(model => model.CategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<User>(entity =>

@@ -8,6 +8,7 @@ Scripts iniciais da base de dados MySQL para o projeto Amazoff.
 2. `002_add_user_image_path.sql`
 3. `003_create_roles.sql`
 4. `004_fix_identity_columns.sql`
+5. `005_create_models.sql`
 
 ## Nota de seguranca
 

@@ -17,7 +17,9 @@ public sealed class RootController : ControllerBase
             {
                 "/health/database",
                 "/auth/login",
+                "/categories",
                 "/employees",
+                "/models",
                 "/roles"
             }
         });

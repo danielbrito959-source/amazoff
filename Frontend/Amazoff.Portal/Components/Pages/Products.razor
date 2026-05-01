@@ -1,9 +1,13 @@
 @page "/produtos"
+@page "/produtos/categorias/{CategoryId:int}"
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 @inject IHttpClientFactory HttpClientFactory
 @inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject Amazoff.Portal.Services.CurrentUserSession CurrentUserSession
 @using System.ComponentModel.DataAnnotations
 @using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>Produtos</PageTitle>
 
@@ -18,7 +22,7 @@
                 <NavLink class="dashboard-nav-item" href="/dashboard">
                     <span>Dashboard</span>
                 </NavLink>
-                <NavLink class="dashboard-nav-item" href="/produtos" Match="NavLinkMatch.All">
+                <NavLink class="dashboard-nav-item" href="/produtos">
                     <span>Produtos</span>
                 </NavLink>
             </div>
@@ -46,9 +50,14 @@
         <div class="dashboard-content">
             <header class="dashboard-topbar">
                 <div class="dashboard-topbar__left hr-topbar-actions">
-                    <button type="button" class="hr-primary-button" @onclick="OpenCreateModal">
-                        Adicionar categoria
-                    </button>
+                    @if (CanManageCategories)
+                    {
+                        <button type="button"
+                                class="hr-primary-button"
+                                @onclick="HandlePrimaryAction">
+                            @PrimaryActionLabel
+                        </button>
+                    }
                 </div>
 
                 <div class="dashboard-topbar__right">
@@ -60,9 +69,16 @@
                 <section class="dashboard-panel hr-table-panel">
                     <div class="dashboard-panel__heading">
                         <div>
-                            <p class="dashboard-section-tag">Categorias</p>
-                            <h3>@Categories.Count categoria(s)</h3>
+                            <p class="dashboard-section-tag">@SectionTag</p>
+                            <h3>@SectionTitle</h3>
                         </div>
+
+                        @if (IsCategoryDetailView)
+                        {
+                            <button type="button" class="hr-secondary-button" @onclick="BackToCategories">
+                                Voltar às categorias
+                            </button>
+                        }
                     </div>
 
                     @if (HasError && !string.IsNullOrWhiteSpace(StatusMessage))
@@ -74,21 +90,84 @@
                     {
                         <p class="dashboard-copy">A carregar categorias...</p>
                     }
-                    else if (Categories.Count == 0)
+                    else if (IsCategoryDetailView && SelectedCategory is null)
+                    {
+                        <p class="dashboard-copy">A categoria selecionada nao foi encontrada.</p>
+                    }
+                    else if (!IsCategoryDetailView && Categories.Count == 0)
                     {
                         <p class="dashboard-copy">Nao ha categorias disponiveis.</p>
+                    }
+                    else if (IsCategoryDetailView)
+                    {
+                        @if (Models.Count == 0)
+                        {
+                            <p class="dashboard-copy">Ainda nao existem modelos para a categoria <strong>@SelectedCategory?.Name</strong>.</p>
+                        }
+                        else
+                        {
+                            <div class="categories-grid product-models-grid">
+                                @foreach (var model in Models)
+                                {
+                                    <article class="category-card product-model-card">
+                                        <div class="category-card__menu-wrap product-model-card__menu-wrap" @onclick:stopPropagation="true">
+                                            <button type="button"
+                                                    class="category-card__menu-button product-model-card__menu-button"
+                                                    @onclick='() => ToggleModelMenu(model.Id)'>
+                                                <span class="sr-only">Abrir ações do modelo</span>
+                                                <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                                            </button>
+
+                                            @if (OpenModelMenuId == model.Id)
+                                            {
+                                                <div class="hr-filter-backdrop" @onclick="CloseModelMenu"></div>
+                                                <div class="category-card__menu">
+                                                    <button type="button"
+                                                            class="category-card__menu-item"
+                                                            @onclick='() => OpenEditModelModal(model)'>
+                                                        Editar
+                                                    </button>
+                                                    <button type="button"
+                                                            class="category-card__menu-item category-card__menu-item--danger"
+                                                            @onclick='() => OpenDeleteModelModal(model)'>
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <img src="@GetModelCardImageUrl(model.ImagePath)"
+                                             alt="@model.Name"
+                                             class="product-model-card__image" />
+
+                                        <div class="category-card__body product-model-card__body">
+                                            <div class="category-card__topline product-model-card__topline">
+                                                <p class="category-card__label">Modelo</p>
+                                            </div>
+
+                                            <div class="category-card__headline product-model-card__headline">
+                                                <h4 class="category-card__title">@model.Name</h4>
+                                                <span class="hr-badge @(model.IsActive ? null : "hr-badge--inactive")">
+                                                    @(model.IsActive ? "Ativo" : "Inativo")
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </article>
+                                }
+                            </div>
+                        }
                     }
                     else
                     {
                         <div class="categories-grid">
                             @foreach (var category in Categories)
                             {
-                                <article class="category-card">
+                                <article class="category-card category-card--interactive" @onclick='() => OpenCategory(category.Id)'>
                                     <div class="category-card__body">
                                         <div class="category-card__topline">
                                             <p class="category-card__label">Categoria</p>
 
-                                            <div class="category-card__menu-wrap">
+                                            <div class="category-card__menu-wrap" @onclick:stopPropagation="true">
                                                 <button type="button"
                                                         class="category-card__menu-button"
                                                         @onclick='() => ToggleCategoryMenu(category.Id)'>
@@ -188,28 +267,150 @@
     </div>
 }
 
+@if (IsModelModalOpen && SelectedCategory is not null)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseModelModal">
+        <div class="hr-modal" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <div>
+                    <h3>@ModelModalTitle</h3>
+                </div>
+                <button type="button" class="hr-modal__close" @onclick="CloseModelModal">x</button>
+            </div>
+
+            <EditForm Model="CreateModelModel" OnSubmit="SaveModelAsync">
+                <DataAnnotationsValidator />
+
+                <div class="hr-modal__grid">
+                    <div class="hr-field hr-field--full hr-field--avatar-simple">
+                        <label for="model-photo" class="hr-photo-picker" title="Carregar foto">
+                            @if (!string.IsNullOrWhiteSpace(CurrentModelPhotoPreview))
+                            {
+                                <img src="@CurrentModelPhotoPreview" alt="@CreateModelModel.Name" class="hr-photo-picker__preview" />
+                            }
+                            else
+                            {
+                                <div class="hr-photo-picker__fallback">@ModelPhotoFallback</div>
+                            }
+
+                            <span class="hr-photo-picker__overlay">
+                                <i class="fa-solid fa-camera" aria-hidden="true"></i>
+                            </span>
+                        </label>
+                        <InputFile id="model-photo"
+                                   OnChange="UploadModelPhotoAsync"
+                                   accept=".png,.jpg,.jpeg"
+                                   class="hr-photo-picker__input" />
+
+                        @if (HasModelPhoto)
+                        {
+                            <button type="button" class="hr-photo-remove-button" @onclick="RemoveModelPhotoSelection">
+                                Remover foto
+                            </button>
+                        }
+                    </div>
+
+                    <div class="hr-field hr-field--full">
+                        <label for="model-name">Nome*</label>
+                        <InputText id="model-name" @bind-Value="CreateModelModel.Name" />
+                        <ValidationMessage For="() => CreateModelModel.Name" />
+                    </div>
+
+                    <div class="hr-field hr-field--full hr-switch-field">
+                        <label for="model-active">Modelo ativo</label>
+                        <label class="hr-switch" for="model-active">
+                            <InputCheckbox id="model-active" @bind-Value="CreateModelModel.IsActive" class="hr-switch__input" />
+                            <span class="hr-switch__track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hr-modal__actions">
+                    <button type="button" class="hr-secondary-button" @onclick="CloseModelModal">Cancelar</button>
+                    <button type="submit" class="hr-primary-button" disabled="@IsBusy">Guardar</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@if (IsDeleteModelModalOpen && ModelPendingDeletion is not null)
+{
+    <div class="hr-modal-backdrop" @onclick="CloseDeleteModelModal">
+        <div class="hr-modal hr-modal--confirm" @onclick:stopPropagation="true">
+            <div class="hr-modal__header">
+                <h3>Eliminar modelo</h3>
+                <button type="button" class="hr-modal__close" @onclick="CloseDeleteModelModal">x</button>
+            </div>
+
+            <p class="hr-confirm-employee">Tem a certeza que deseja eliminar o modelo <strong>@ModelPendingDeletion.Name</strong>?</p>
+
+            <div class="hr-modal__actions">
+                <button type="button" class="hr-secondary-button" @onclick="CloseDeleteModelModal">Cancelar</button>
+                <button type="button" class="hr-secondary-button hr-secondary-button--danger" @onclick="ConfirmDeleteModelAsync" disabled="@IsBusy">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
+    [Parameter]
+    public int? CategoryId { get; set; }
+
     private readonly List<CategoryViewModel> Categories = [];
+    private readonly List<ModelViewModel> Models = [];
+    private static readonly HashSet<string> AllowedPhotoExtensions = [".png", ".jpg", ".jpeg"];
+    private Amazoff.Portal.Services.CurrentUserDto? CurrentUser { get; set; }
     private CreateCategoryViewModel CreateCategoryModel { get; set; } = new();
+    private CreateModelViewModel CreateModelModel { get; set; } = new();
     private CategoryViewModel? CategoryPendingDeletion { get; set; }
+    private ModelViewModel? ModelPendingDeletion { get; set; }
+    private PendingModelPhotoUpload? PendingModelPhoto { get; set; }
     private int? EditingCategoryId { get; set; }
     private int? OpenCategoryMenuId { get; set; }
+    private int? EditingModelId { get; set; }
+    private int? OpenModelMenuId { get; set; }
     private bool IsCreateModalOpen { get; set; }
     private bool IsDeleteModalOpen { get; set; }
+    private bool IsModelModalOpen { get; set; }
+    private bool IsDeleteModelModalOpen { get; set; }
     private bool IsBusy { get; set; }
     private bool IsLoading { get; set; } = true;
     private bool HasError { get; set; }
     private string? StatusMessage { get; set; }
+    private bool CanManageCategories => CurrentUser?.RoleId is 1 or 2;
+    private bool IsCategoryDetailView => CategoryId.HasValue;
+    private CategoryViewModel? SelectedCategory => Categories.FirstOrDefault(category => category.Id == CategoryId);
+    private string PrimaryActionLabel => IsCategoryDetailView ? "Adicionar Modelo" : "Adicionar categoria";
+    private string SectionTag => IsCategoryDetailView ? "Modelos" : "Categorias";
+    private string SectionTitle => IsCategoryDetailView
+        ? $"Categoria: {SelectedCategory?.Name ?? "Categoria"}"
+        : $"{Categories.Count} categoria(s)";
+    private string ModelModalTitle => EditingModelId.HasValue ? "Editar Modelo" : "Adicionar Modelo";
+    private bool HasModelPhoto => PendingModelPhoto is not null || !string.IsNullOrWhiteSpace(CreateModelModel.ImagePath);
+    private string? CurrentModelPhotoPreview => PendingModelPhoto?.PreviewUrl ?? ResolveImageUrl(CreateModelModel.ImagePath);
+    private string ModelPhotoFallback =>
+        string.IsNullOrWhiteSpace(CreateModelModel.Name)
+            ? "M"
+            : char.ToUpperInvariant(CreateModelModel.Name.Trim()[0]).ToString();
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnParametersSetAsync()
     {
-        if (!firstRender)
+        if (CurrentUser is null)
         {
-            return;
+            CurrentUser = await CurrentUserSession.GetAsync();
         }
 
         await LoadCategoriesAsync();
-        StateHasChanged();
+
+        if (IsCategoryDetailView && SelectedCategory is not null)
+        {
+            await LoadModelsAsync();
+        }
+        else
+        {
+            Models.Clear();
+        }
     }
 
     private async Task LoadCategoriesAsync()
@@ -243,6 +444,43 @@
         }
     }
 
+    private async Task LoadModelsAsync()
+    {
+        if (!CategoryId.HasValue)
+        {
+            Models.Clear();
+            return;
+        }
+
+        IsLoading = true;
+
+        try
+        {
+            var models = await SendApiRequestAsync(async client =>
+                await client.GetFromJsonAsync<List<ModelViewModel>>($"/models?categoryId={CategoryId.Value}"));
+
+            Models.Clear();
+
+            if (models is not null)
+            {
+                Models.AddRange(models);
+            }
+
+            StatusMessage = null;
+            HasError = false;
+        }
+        catch (Exception)
+        {
+            Models.Clear();
+            StatusMessage = "Nao foi possivel carregar os modelos.";
+            HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
     private void OpenCreateModal()
     {
         EditingCategoryId = null;
@@ -254,6 +492,79 @@
         OpenCategoryMenuId = null;
         StatusMessage = null;
         HasError = false;
+    }
+
+    private void HandlePrimaryAction()
+    {
+        if (IsCategoryDetailView)
+        {
+            OpenModelModal();
+            return;
+        }
+
+        OpenCreateModal();
+    }
+
+    private void OpenCategory(int categoryId)
+    {
+        NavigationManager.NavigateTo($"/produtos/categorias/{categoryId}");
+    }
+
+    private void BackToCategories()
+    {
+        NavigationManager.NavigateTo("/produtos");
+    }
+
+    private void OpenModelModal()
+    {
+        EditingModelId = null;
+        CreateModelModel = new CreateModelViewModel
+        {
+            IsActive = true
+        };
+        PendingModelPhoto = null;
+        IsModelModalOpen = true;
+        OpenModelMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseModelModal()
+    {
+        IsModelModalOpen = false;
+        EditingModelId = null;
+        PendingModelPhoto = null;
+    }
+
+    private void OpenEditModelModal(ModelViewModel model)
+    {
+        EditingModelId = model.Id;
+        CreateModelModel = new CreateModelViewModel
+        {
+            Name = model.Name,
+            ImagePath = model.ImagePath,
+            IsActive = model.IsActive
+        };
+        PendingModelPhoto = null;
+        IsModelModalOpen = true;
+        OpenModelMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void OpenDeleteModelModal(ModelViewModel model)
+    {
+        ModelPendingDeletion = model;
+        IsDeleteModelModalOpen = true;
+        OpenModelMenuId = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private void CloseDeleteModelModal()
+    {
+        IsDeleteModelModalOpen = false;
+        ModelPendingDeletion = null;
     }
 
     private void OpenEditModal(CategoryViewModel category)
@@ -299,6 +610,16 @@
     private void CloseCategoryMenu()
     {
         OpenCategoryMenuId = null;
+    }
+
+    private void ToggleModelMenu(int modelId)
+    {
+        OpenModelMenuId = OpenModelMenuId == modelId ? null : modelId;
+    }
+
+    private void CloseModelMenu()
+    {
+        OpenModelMenuId = null;
     }
 
     private async Task SaveCategoryAsync()
@@ -396,10 +717,245 @@
         }
     }
 
+    private async Task UploadModelPhotoAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+
+        if (file is null)
+        {
+            return;
+        }
+
+        var extension = Path.GetExtension(file.Name);
+
+        if (!AllowedPhotoExtensions.Contains(extension))
+        {
+            StatusMessage = "Formato de imagem invalido. Usa PNG, JPG ou JPEG.";
+            HasError = true;
+            return;
+        }
+
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            await using var stream = file.OpenReadStream(5_000_000);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+
+            var content = memoryStream.ToArray();
+            var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "image/jpeg" : file.ContentType;
+
+            PendingModelPhoto = new PendingModelPhotoUpload(
+                file.Name,
+                contentType,
+                content,
+                $"data:{contentType};base64,{Convert.ToBase64String(content)}");
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel preparar a foto do modelo.";
+            HasError = true;
+        }
+    }
+
+    private void RemoveModelPhotoSelection()
+    {
+        PendingModelPhoto = null;
+        CreateModelModel.ImagePath = null;
+        StatusMessage = null;
+        HasError = false;
+    }
+
+    private async Task SaveModelAsync()
+    {
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        if (string.IsNullOrWhiteSpace(CreateModelModel.Name))
+        {
+            StatusMessage = "O nome do modelo e obrigatorio.";
+            HasError = true;
+            IsBusy = false;
+            return;
+        }
+
+        if (!CategoryId.HasValue)
+        {
+            StatusMessage = "A categoria do modelo nao foi encontrada.";
+            HasError = true;
+            IsBusy = false;
+            return;
+        }
+
+        try
+        {
+            var isEditing = EditingModelId.HasValue;
+            var request = new CreateOrUpdateModelRequest
+            {
+                Name = CreateModelModel.Name.Trim(),
+                CategoryId = CategoryId.Value,
+                ImagePath = CreateModelModel.ImagePath,
+                IsActive = CreateModelModel.IsActive
+            };
+
+            var response = isEditing
+                ? await SendApiRequestAsync(client => client.PutAsJsonAsync($"/models/{EditingModelId}", request))
+                : await SendApiRequestAsync(client => client.PostAsJsonAsync("/models", request));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+                StatusMessage = apiMessage?.Message ?? (isEditing
+                    ? "Nao foi possivel alterar o modelo."
+                    : "Nao foi possivel adicionar o modelo.");
+                HasError = true;
+                return;
+            }
+
+            var createdModel = await response.Content.ReadFromJsonAsync<ModelViewModel>();
+
+            if (createdModel is null)
+            {
+                StatusMessage = "O modelo foi criado, mas a resposta da API veio vazia.";
+                HasError = true;
+                return;
+            }
+
+            if (PendingModelPhoto is not null)
+            {
+                var uploaded = await SavePendingModelPhotoAsync(createdModel.Id, PendingModelPhoto);
+
+                if (!uploaded)
+                {
+                    return;
+                }
+            }
+
+            CloseModelModal();
+            await LoadModelsAsync();
+            await JS.InvokeVoidAsync(
+                "amazoffToast.success",
+                isEditing ? "Modelo alterado com sucesso." : "Modelo adicionado com sucesso.");
+        }
+        catch (Exception)
+        {
+            StatusMessage = EditingModelId.HasValue
+                ? "Nao foi possivel alterar o modelo."
+                : "Nao foi possivel adicionar o modelo.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task ConfirmDeleteModelAsync()
+    {
+        if (ModelPendingDeletion is null)
+        {
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = null;
+        HasError = false;
+
+        try
+        {
+            var response = await SendApiRequestAsync(client => client.DeleteAsync($"/models/{ModelPendingDeletion.Id}"));
+
+            if (response.IsSuccessStatusCode)
+            {
+                CloseDeleteModelModal();
+                await LoadModelsAsync();
+                await JS.InvokeVoidAsync("amazoffToast.success", "Modelo eliminado com sucesso.");
+                return;
+            }
+
+            var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+            StatusMessage = apiMessage?.Message ?? "Nao foi possivel eliminar o modelo.";
+            HasError = true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel eliminar o modelo.";
+            HasError = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
     private async Task<T> SendApiRequestAsync<T>(Func<HttpClient, Task<T>> request)
     {
         var client = HttpClientFactory.CreateClient("AmazoffApi");
         return await request(client);
+    }
+
+    private async Task<bool> SavePendingModelPhotoAsync(int modelId, PendingModelPhotoUpload pendingPhoto)
+    {
+        try
+        {
+            using var formData = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(pendingPhoto.Content);
+            fileContent.Headers.ContentType = new(pendingPhoto.ContentType);
+            formData.Add(fileContent, "file", pendingPhoto.FileName);
+
+            var response = await SendApiRequestAsync(client => client.PostAsync($"/models/{modelId}/photo", formData));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var apiMessage = await response.Content.ReadFromJsonAsync<ApiMessageResponse>();
+                StatusMessage = apiMessage?.Message ?? "Nao foi possivel guardar a foto do modelo.";
+                HasError = true;
+                return false;
+            }
+
+            var uploadResult = await response.Content.ReadFromJsonAsync<ModelPhotoUploadResponse>();
+
+            if (uploadResult is not null)
+            {
+                CreateModelModel.ImagePath = uploadResult.ImagePath;
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            StatusMessage = "Nao foi possivel guardar a foto do modelo.";
+            HasError = true;
+            return false;
+        }
+    }
+
+    private string? ResolveImageUrl(string? imagePath)
+    {
+        if (string.IsNullOrWhiteSpace(imagePath))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(imagePath, UriKind.Absolute, out _))
+        {
+            return imagePath;
+        }
+
+        var client = HttpClientFactory.CreateClient("AmazoffApi");
+        var baseUrl = client.BaseAddress?.ToString().TrimEnd('/');
+
+        return string.IsNullOrWhiteSpace(baseUrl)
+            ? imagePath
+            : $"{baseUrl}/{imagePath.TrimStart('/')}";
+    }
+
+    private string GetModelCardImageUrl(string? imagePath)
+    {
+        return ResolveImageUrl(imagePath) ?? "/images/LogoShort_Amazoff.png";
     }
 
     private sealed class CategoryViewModel
@@ -407,6 +963,17 @@
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+    }
+
+    private sealed class ModelViewModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int CategoryId { get; set; }
+        public string? ImagePath { get; set; }
+        public bool IsActive { get; set; }
+        public DateTime DateCreated { get; set; }
+        public DateTime DateChanged { get; set; }
     }
 
     private sealed class CreateCategoryViewModel
@@ -417,5 +984,25 @@
         public bool IsActive { get; set; } = true;
     }
 
+    private sealed class CreateModelViewModel
+    {
+        [Required(ErrorMessage = "O nome e obrigatorio.")]
+        public string Name { get; set; } = string.Empty;
+
+        public string? ImagePath { get; set; }
+
+        public bool IsActive { get; set; } = true;
+    }
+
+    private sealed class CreateOrUpdateModelRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public int CategoryId { get; set; }
+        public string? ImagePath { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
+    private sealed record PendingModelPhotoUpload(string FileName, string ContentType, byte[] Content, string PreviewUrl);
+    private sealed record ModelPhotoUploadResponse(string ImagePath);
     private sealed record ApiMessageResponse(string Message);
 }
